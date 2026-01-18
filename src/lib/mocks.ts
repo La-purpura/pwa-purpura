@@ -206,8 +206,19 @@ export const mockInvites = [
 
 export const mockOfflineQueue = [];
 
-export const mockReports = [
-  { id: "r1", title: "Reporte Mensual Enero", status: "completed" }
+// Note: Report interface might need to be exported if used elsewhere
+export interface Report {
+  id: string;
+  title: string;
+  status: "resolved" | "pending" | "critical";
+  territory: string;
+  createdAt: string;
+}
+
+export const mockReports: Report[] = [
+  { id: "r1", title: "Reporte Mensual Enero", status: "resolved", territory: "Zona Norte", createdAt: "2024-01-20T10:00:00Z" },
+  { id: "r2", title: "Incidente de Seguridad", status: "critical", territory: "Zona Sur", createdAt: "2024-01-21T14:30:00Z" },
+  { id: "r3", title: "Relevamiento de Campo", status: "pending", territory: "Godoy Cruz", createdAt: "2024-01-22T09:15:00Z" }
 ];
 
 export const mockSurveys = [

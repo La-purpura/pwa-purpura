@@ -3,8 +3,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
-  User, Task, Incident, Alert, Kpis, Draft, Project, News,
-  mockUserRegular, mockTasks, mockIncidents, mockAlerts, mockKpis, mockDrafts, mockProjects, mockNews, mockUsers
+  User, Task, Incident, Alert, Kpis, Draft, Project, News, Report,
+  mockUserRegular, mockTasks, mockIncidents, mockAlerts, mockKpis, mockDrafts, mockProjects, mockNews, mockUsers, mockReports
 } from "./mocks";
 
 interface AppState {
@@ -29,6 +29,8 @@ interface AppState {
 
   news: News[];
   addNews: (news: News) => void;
+
+  reports: Report[];
 
   users: User[];
   addUser: (user: User) => void;
@@ -77,6 +79,8 @@ export const useAppStore = create<AppState>()(
 
       news: mockNews,
       addNews: (news) => set((state) => ({ news: [news, ...state.news] })),
+
+      reports: mockReports,
 
       users: mockUsers,
       addUser: (user) => set((state) => ({ users: [user, ...state.users] })),
