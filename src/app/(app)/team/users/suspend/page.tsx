@@ -130,7 +130,7 @@ export default function TeamUserSuspendPage() {
             SUSPENDER ACCESO TEMPORALMENTE
           </Link>
           <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 mt-4 leading-tight">
-            Al confirmar, esta accion quedara registrada en el log de auditoria del sistema "La Purpura Territorio".
+            Se enviará una notificación al usuario indicando la suspensión por &quot;Actividad Sospechosa&quot;.ema "La Purpura Territorio".
           </p>
         </footer>
       </div>
