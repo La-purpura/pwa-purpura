@@ -118,6 +118,7 @@ export default function DashboardPage() {
                 <span className="font-bold">Juan Pérez</span> subió un nuevo relevamiento en <span className="text-primary">Luján de Cuyo</span>.
               </p>
               <p className="text-xs text-gray-400 mt-1 font-medium">Hace 15 min</p>
+              <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">Has superado el promedio de &quot;Resolución Rápida&quot; de tu zona.</p>
             </div>
             <div className="text-green-500">
               <span className="material-symbols-outlined">check_circle</span>

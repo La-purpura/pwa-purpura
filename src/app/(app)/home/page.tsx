@@ -340,7 +340,7 @@ export default function HomePage() {
               </div>
               <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
                 <span className="material-symbols-outlined text-[16px]">sync_alt</span>
-                Reasignar
+                Se te ha asignado &apos;Censo B. La Gloria&apos;
               </span>
             </div>
           </Link>
