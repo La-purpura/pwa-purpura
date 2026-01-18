@@ -1,1 +1,5 @@
-"use client";`n`nimport ModulePlaceholder from "@/components/templates/ModulePlaceholder";`n`nexport default function Page() { return <ModulePlaceholder title="confirmation" />; }
+"use client";
+
+import ModulePlaceholder from "@/components/templates/ModulePlaceholder";
+
+export default function Page() { return <ModulePlaceholder title="confirmation" />; }
