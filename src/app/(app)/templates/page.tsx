@@ -1,5 +1,7 @@
 "use client";
 
-import ModulePlaceholder from "@/components/templates/ModulePlaceholder";
+import ModulePlaceholder from "@/components/ModulePlaceholder";
 
-export default function Page() { return <ModulePlaceholder title="templates" />; }
+export default function TemplatesPage() {
+    return <ModulePlaceholder title="Plantillas" />;
+}
