@@ -158,6 +158,7 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gray-800 p-1 rounded-2xl ios-shadow overflow-hidden">
           <div className="relative h-40 w-full rounded-xl bg-gray-200 overflow-hidden">
             <img
+              alt="Mapa Mendoza"
               className="w-full h-full object-cover"
               data-alt="Mapa abstracto de la ciudad de Mendoza con marcadores"
               data-location="Mendoza"
