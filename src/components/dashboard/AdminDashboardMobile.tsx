@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
 
 export default function AdminDashboardMobile() {
     return (
@@ -45,6 +46,9 @@ export default function AdminDashboardMobile() {
                     </div>
                 </section>
             )}
+
+            {/* Comunicados */}
+            <AnnouncementFeed />
 
             {/* Lista de Actividad Reciente (Estilo Feed) */}
             <section>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
 
 export default function UserDashboardDesktop() {
     return (
@@ -79,25 +80,7 @@ export default function UserDashboardDesktop() {
 
                 {/* Columna Derecha: Avisos y Materiales */}
                 <section className="space-y-6">
-                    <div className="bg-white dark:bg-[#20121d] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
-                        <h3 className="font-bold mb-4">Avisos Recientes</h3>
-                        <div className="space-y-4">
-                            <div className="flex gap-3 items-start">
-                                <div className="w-2 h-2 rounded-full bg-[#851c74] mt-2 flex-shrink-0"></div>
-                                <div>
-                                    <p className="text-sm font-bold">Reunión de Equipo</p>
-                                    <p className="text-xs text-gray-500">Mañana 09:00 AM - Sede Central</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-3 items-start">
-                                <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
-                                <div>
-                                    <p className="text-sm font-bold">Alerta Meteorológica</p>
-                                    <p className="text-xs text-gray-500">Vientos fuertes pronosticados para la tarde.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <AnnouncementFeed />
 
                     <div className="bg-[#851c74]/5 rounded-2xl p-6 border border-[#851c74]/10">
                         <h3 className="font-bold text-[#851c74] mb-2">Materiales Útiles</h3>

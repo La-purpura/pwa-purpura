@@ -6,16 +6,16 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('🌱 Iniciando Seed M3...');
 
-    // LIMPIEZA (Solo para dev, borra todo para reiniciar IDs)
-    // Comentar si se quiere preservar datos
+    // LIMPIEZA
     try {
+        await prisma.postRead.deleteMany();
+        await prisma.post.deleteMany();
         await prisma.auditLog.deleteMany();
         await prisma.task.deleteMany();
         await prisma.project.deleteMany();
         await prisma.alert.deleteMany();
         await prisma.request.deleteMany();
-        // await prisma.user.deleteMany(); // Dejamos users si queremos
-        await prisma.territory.deleteMany(); // Reseteamos estructura territorial
+        await prisma.territory.deleteMany();
         await prisma.branch.deleteMany();
     } catch (e) { console.log('Base limpia o vacía'); }
 
@@ -34,12 +34,10 @@ async function main() {
     console.log('✅ Ramas creadas');
 
     // 2. TERRITORIOS
-    // Root
     const nacional = await prisma.territory.create({
         data: { name: 'Nacional', type: 'country' }
     });
 
-    // Provincias
     const buenosAires = await prisma.territory.create({
         data: { name: 'Buenos Aires', type: 'province', parentId: nacional.id }
     });
@@ -48,16 +46,11 @@ async function main() {
         data: { name: 'Mendoza', type: 'province', parentId: nacional.id }
     });
 
-    // Localidades
     await prisma.territory.create({
         data: { name: 'La Plata', type: 'locality', parentId: buenosAires.id }
     });
 
-    await prisma.territory.create({
-        data: { name: 'Vicente López', type: 'locality', parentId: buenosAires.id }
-    });
-
-    await prisma.territory.create({
+    const godoyCruz = await prisma.territory.create({
         data: { name: 'Godoy Cruz', type: 'locality', parentId: mendoza.id }
     });
 
@@ -66,7 +59,6 @@ async function main() {
     // 3. USUARIO ADMIN
     const hashedPassword = await bcrypt.hash('admin123', 10);
 
-    // Upsert user
     const admin = await prisma.user.upsert({
         where: { email: 'admin@purpura.app' },
         update: {
@@ -116,6 +108,28 @@ async function main() {
         }
     });
     console.log('✅ Solicitud inicial creada');
+
+    // 6. COMUNICADOS INICIALES (M9)
+    await prisma.post.create({
+        data: {
+            title: 'Bienvenido a La Púrpura',
+            content: 'Estamos lanzando la nueva plataforma de gestión territorial.',
+            type: 'news',
+            authorId: admin.id
+        }
+    });
+
+    await prisma.post.create({
+        data: {
+            title: 'URGENTE: Censo Territorial',
+            content: 'Todos los referentes deben completar su censo antes del viernes.',
+            type: 'urgent',
+            authorId: admin.id,
+            territoryId: nacional.id
+        }
+    });
+
+    console.log('✅ Comunicados iniciales creados');
 }
 
 main()

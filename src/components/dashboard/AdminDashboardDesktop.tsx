@@ -7,6 +7,7 @@ import { useAppStore } from "@/lib/store";
 import { DashboardAnalytics } from "@/components/dashboard/DashboardAnalytics";
 import { useRBAC } from "@/hooks/useRBAC";
 import { DbRequest } from "@/lib/server-db";
+import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
 
 interface RequestView {
     id: string;
@@ -188,8 +189,15 @@ export default function AdminDashboardDesktop() {
                 </div>
             </section>
 
-            {/* Gráficos */}
-            <DashboardAnalytics />
+            {/* Gráficos y Comunicados */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div className="xl:col-span-2">
+                    <DashboardAnalytics />
+                </div>
+                <div>
+                    <AnnouncementFeed />
+                </div>
+            </div>
 
             {/* Accesos Directos */}
             <section>

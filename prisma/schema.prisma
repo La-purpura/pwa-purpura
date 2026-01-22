@@ -21,12 +21,14 @@ model Territory {
   tasks     Task[]
   projectTerritories ProjectTerritory[]
   requests  Request[]
+  posts     Post[]
 }
 
 model Branch {
   id    String @id @default(cuid())
   name  String @unique // PyME, Deportes, Salud...
   users User[]
+  posts Post[]
 }
 
 // --- M1/M4: Usuarios y Auth ---
@@ -50,6 +52,8 @@ model User {
   requests      Request[]
   ledProjects   Project[]
   auditLogs     AuditLog[] // Relation to audit log
+  authoredPosts Post[]     @relation("AuthoredPosts")
+  readPosts     PostRead[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -165,6 +169,43 @@ model Request {
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// --- M9: Intranet & Communications ---
+
+model Post {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  type        String   @default("news") // news, urgent, internal
+  
+  // Segmentation
+  branchId    String?
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  territoryId String?
+  territory   Territory? @relation(fields: [territoryId], references: [id])
+  
+  authorId    String
+  author      User     @relation("AuthoredPosts", fields: [authorId], references: [id])
+  
+  isDraft     Boolean  @default(false)
+  publishedAt DateTime @default(now())
+  
+  reads       PostRead[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PostRead {
+  postId String
+  post   Post   @relation(fields: [postId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  
+  readAt DateTime @default(now())
+
+  @@id([postId, userId])
 }
 
 // --- M2: Auditoría ---
