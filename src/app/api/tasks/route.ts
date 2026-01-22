@@ -48,8 +48,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
     }
 
-    // Nota: El frontend manda strings, aquí deberíamos resolver IDs.
-    // Para este MVP fase M2, crearemos la tarea sin relaciones complejas si no vienen IDs.
+    // ABAC: Definir territorio destino
+    let targetTerritoryId = body.territoryId;
+
+    // Si el usuario tiene scope restringido, forzamos su territorio
+    if (session.territoryId) {
+      targetTerritoryId = session.territoryId;
+    }
 
     const newTask = await prisma.task.create({
       data: {
@@ -58,7 +63,7 @@ export async function POST(request: Request) {
         priority: body.priority || "medium",
         status: "pending",
         dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-        // Opcional: Asignar al creador si no hay assignee
+        territoryId: targetTerritoryId || undefined // Link to territory
       }
     });
 

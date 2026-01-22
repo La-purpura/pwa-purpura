@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 
@@ -8,49 +8,105 @@ export default function NewTaskPage() {
   const router = useRouter();
   const addTask = useAppStore((state) => state.addTask);
   const addToOfflineQueue = useAppStore((state) => state.addToOfflineQueue);
+  const user = useAppStore((state) => state.user);
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
+
+  // Territory Management
   const [territory, setTerritory] = useState("");
-  const [assignee, setAssignee] = useState("");
+  const [territoryId, setTerritoryId] = useState(""); // ID real para backend
+  const [availableTerritories, setAvailableTerritories] = useState<{ id: string, name: string }[]>([]);
+  const [isLoadingTerritories, setIsLoadingTerritories] = useState(false);
+
+  // Auto-fill territory if user has restricted scope
+  useEffect(() => {
+    if (!user) return;
+
+    // Si el usuario tiene territorio fijo (no es Admin Nacional global)
+    // Nota: Dependiendo de cómo guardemos 'territory' en el store (nombre vs ID).
+    // Asumiremos que el backend en /api/auth/login devuelve { territory: "La Plata" } como nombre.
+    // Lo ideal es tener territoryId en el user store.
+
+    // Simulación de lógica RBAC simple en Frontend (Backend es quien manda)
+    const isAdminGlobal = user.role === "SuperAdminNacional" || user.role === "AdminNacional";
+
+    if (isAdminGlobal) {
+      setIsLoadingTerritories(true);
+      fetch('/api/territories')
+        .then(res => res.json())
+        .then(data => {
+          setAvailableTerritories(data);
+          setIsLoadingTerritories(false);
+        })
+        .catch(() => setIsLoadingTerritories(false));
+    } else {
+      // Usuario restringido: Pre-llenar y bloquear
+      setTerritory(user.territory || "Mi Territorio");
+      // No tenemos el territoryId aquí si el login no lo devolvió, pero la API lo resolverá por sesión.
+    }
+  }, [user]);
+
+  const [assignee, setAssignee] = useState(user?.name || "");
   const [priority, setPriority] = useState("high");
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [subtasksTotal, setSubtasksTotal] = useState("3");
   const [description, setDescription] = useState("");
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!title.trim() || !territory.trim() || !assignee.trim()) {
-      alert("Completa titulo, territorio y responsable.");
+    if (!title.trim()) {
+      alert("El título es obligatorio.");
       return;
     }
 
     const taskPayload = {
-      id: Math.random().toString(36).substr(2, 9), // Generate ID
       title: title.trim(),
-      status: "pending" as const,
       priority: priority as "low" | "medium" | "high",
       dueDate: dueDate || new Date().toISOString(),
       category: category || "Operativos",
-      territory,
-      assignee,
-      subtasksDone: 0,
+      territory: territory,      // Nombre (para UI offline)
+      territoryId: territoryId,  // ID (para Backend)
+      assignee: assignee,
+      description: description,
       subtasksTotal: Number(subtasksTotal) || 1,
-      description: description, // Include description
-      date: new Date().toISOString() // Include mandatory date field
+      status: "pending"
     };
 
-    addTask(taskPayload);
+    // 1. Backend Sync (Intento online)
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(taskPayload),
+      });
+
+      if (res.ok) {
+        const serverTask = await res.json();
+        // Actualizar store con la tarea confirmada por servidor
+        addTask({
+          ...taskPayload,
+          id: serverTask.id,
+          status: serverTask.status,
+          date: new Date().toISOString(),
+          subtasksDone: 0
+        });
+        router.push("/tasks");
+        return;
+      }
+    } catch (e) {
+      console.log("Offline mode detected, queuing task.");
+    }
+
+    // 2. Fallback Offline
+    const offlineId = Math.random().toString(36).substr(2, 9);
+    addTask({ ...taskPayload, id: offlineId, subtasksDone: 0, date: new Date().toISOString(), status: 'pending' });
     addToOfflineQueue({
-      id: taskPayload.id,
+      id: offlineId,
       type: "task",
       title: title.trim(),
     });
-    void fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(taskPayload),
-    });
+
     router.push("/tasks");
   };
 
@@ -77,7 +133,7 @@ export default function NewTaskPage() {
             Crear Operativo
           </h3>
           <p className="text-gray-600 dark:text-gray-400 text-sm font-normal mt-2">
-            Completa los datos para registrar una nueva tarea territorial.
+            Registrar nueva acción territorial.
           </p>
         </section>
 
@@ -93,34 +149,44 @@ export default function NewTaskPage() {
                 onChange={(event) => setTitle(event.target.value)}
               />
             </label>
+
+            {/* Selector de Territorio Inteligente */}
+            <label className="flex flex-col w-full">
+              <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-1.5 ml-1">Territorio</p>
+
+              {availableTerritories.length > 0 ? (
+                <select
+                  className="form-input w-full rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 h-12 p-3 text-sm"
+                  value={territoryId}
+                  onChange={(e) => {
+                    setTerritoryId(e.target.value);
+                    setTerritory(e.target.options[e.target.selectedIndex].text);
+                  }}
+                >
+                  <option value="">Seleccionar Territorio...</option>
+                  {availableTerritories.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  className="form-input w-full rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-gray-500 cursor-not-allowed h-12 p-3 text-sm"
+                  type="text"
+                  value={territory}
+                  readOnly
+                  title="Asignado automáticamente por tu rol"
+                />
+              )}
+            </label>
+
             <label className="flex flex-col w-full">
               <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-1.5 ml-1">Categoria</p>
               <input
-                className="form-input w-full rounded-lg text-[#171216] dark:text-white focus:ring-2 focus:ring-primary/20 border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary h-12 placeholder:text-gray-400 p-3 text-sm transition-all"
+                className="form-input w-full rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 h-12 p-3 text-sm"
                 placeholder="Ej. Urbanizacion"
                 type="text"
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
-              />
-            </label>
-            <label className="flex flex-col w-full">
-              <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-1.5 ml-1">Territorio</p>
-              <input
-                className="form-input w-full rounded-lg text-[#171216] dark:text-white focus:ring-2 focus:ring-primary/20 border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary h-12 placeholder:text-gray-400 p-3 text-sm transition-all"
-                placeholder="Ej. Zona Norte"
-                type="text"
-                value={territory}
-                onChange={(event) => setTerritory(event.target.value)}
-              />
-            </label>
-            <label className="flex flex-col w-full">
-              <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-1.5 ml-1">Responsable</p>
-              <input
-                className="form-input w-full rounded-lg text-[#171216] dark:text-white focus:ring-2 focus:ring-primary/20 border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary h-12 placeholder:text-gray-400 p-3 text-sm transition-all"
-                placeholder="Ej. Ana P."
-                type="text"
-                value={assignee}
-                onChange={(event) => setAssignee(event.target.value)}
               />
             </label>
           </div>
@@ -152,7 +218,7 @@ export default function NewTaskPage() {
               <label className="flex flex-col">
                 <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-2 ml-1">Fecha limite</p>
                 <input
-                  className="form-input w-full rounded-lg text-[#171216] dark:text-white focus:ring-2 focus:ring-primary/20 border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary h-12 placeholder:text-gray-400 p-3 text-sm transition-all"
+                  className="form-input w-full rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 h-12 p-3 text-sm"
                   type="date"
                   value={dueDate}
                   onChange={(event) => setDueDate(event.target.value)}
@@ -161,7 +227,7 @@ export default function NewTaskPage() {
               <label className="flex flex-col">
                 <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-2 ml-1">Subtareas</p>
                 <input
-                  className="form-input w-full rounded-lg text-[#171216] dark:text-white focus:ring-2 focus:ring-primary/20 border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary h-12 placeholder:text-gray-400 p-3 text-sm transition-all"
+                  className="form-input w-full rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 h-12 p-3 text-sm"
                   type="number"
                   min={1}
                   value={subtasksTotal}
@@ -174,8 +240,8 @@ export default function NewTaskPage() {
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5">
             <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-3 ml-1">Descripcion</p>
             <textarea
-              className="form-input w-full resize-none rounded-lg text-[#171216] dark:text-white focus:ring-2 focus:ring-primary/20 border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[120px] placeholder:text-gray-400 p-3 text-sm transition-all"
-              placeholder="Agregar notas del operativo..."
+              className="form-input w-full resize-none rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[120px] p-3 text-sm"
+              placeholder="Detalles..."
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             ></textarea>
@@ -186,7 +252,7 @@ export default function NewTaskPage() {
             type="submit"
           >
             <span className="material-symbols-outlined">add_task</span>
-            Crear Operativo
+            Confirmar Operativo
           </button>
         </form>
       </main>
