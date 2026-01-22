@@ -227,14 +227,7 @@ export default function TasksPage() {
         ))}
       </section>
 
-      <div className="fixed bottom-20 right-4 pointer-events-auto z-40">
-        <button
-          className="bg-primary/20 backdrop-blur-md text-primary p-3 rounded-full shadow-lg border border-primary/20 active:scale-90 transition-transform"
-          onClick={() => router.push("/map")}
-        >
-          <span className="material-symbols-outlined">near_me</span>
-        </button>
-      </div>
+
 
       <button
         className="fixed right-6 bottom-24 size-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-50"

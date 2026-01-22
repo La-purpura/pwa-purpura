@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
-import { mockUserAdmin, mockUserRegular } from "@/lib/mocks";
 
 export default function Home() {
   const [passwordShown, setPasswordShown] = useState(false);
@@ -18,26 +17,40 @@ export default function Home() {
 
   const setUser = useAppStore((state) => state.setUser);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!identity.trim() || !password.trim()) {
       alert("Completa usuario y contraseña para ingresar.");
       return;
     }
 
-    // Lógica de simulación de Rol
-    const isAdmin = identity.toLowerCase().includes("admin");
-    const sessionUser = isAdmin ? mockUserAdmin : mockUserRegular;
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: identity.trim(), password })
+      });
 
-    setUser({
-      ...sessionUser,
-      name: identity.trim(),
-    });
+      const data = await res.json();
 
-    if (isAdmin) {
-      router.push("/dashboard");
-    } else {
-      router.push("/home");
+      if (!res.ok) {
+        alert(data.error || "Error al iniciar sesión");
+        return;
+      }
+
+      // Login exitoso
+      setUser(data.user);
+
+      // Redirección basada en rol
+      if (["SuperAdminNacional", "AdminNacional", "AdminProvincial"].includes(data.user.role)) {
+        router.push("/dashboard");
+      } else {
+        router.push("/home"); // PWA User
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert("Error de conexión");
     }
   };
 
@@ -132,12 +145,12 @@ export default function Home() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
             <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
-              <span className="material-symbols-outlined text-sm mr-1.5 text-primary">wifi_off</span>
-              <span>Modo Offline Activo</span>
+              <span className="material-symbols-outlined text-sm mr-1.5 text-primary">cloud</span>
+              <span>Online (Local DB)</span>
             </div>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-600 text-center max-w-[260px] leading-tight">
-            Tus datos se sincronizarán automáticamente al recuperar la conexión.
+            Versión de desarrollo v2.0
           </p>
         </div>
       </div>
