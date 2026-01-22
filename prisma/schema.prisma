@@ -48,6 +48,7 @@ model User {
   assignedTasks Task[]
   requests      Request[]
   ledProjects   Project[]
+  auditLogs     AuditLog[] // Relation to audit log
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -159,4 +160,17 @@ model Request {
   submittedBy   User     @relation(fields: [submittedById], references: [id])
   
   createdAt     DateTime @default(now())
+}
+
+// --- M2: Auditoría ---
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // Ej: TASK_CREATED, USER_LOGIN
+  entity    String   // Ej: Task, Project
+  entityId  String   // ID del objeto afectado
+  actorId   String   // Usuario que hizo la acción
+  actor     User     @relation(fields: [actorId], references: [id])
+  metadata  String?  // JSON con detalles (Old value -> New value)
+  createdAt DateTime @default(now())
 }
