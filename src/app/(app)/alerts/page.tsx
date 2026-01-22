@@ -3,15 +3,20 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
+import { useRBAC } from "@/hooks/useRBAC";
 
 const alertIcons = {
   system: { icon: "emergency_home", color: "text-primary", bg: "bg-primary/10" },
   security: { icon: "priority_high", color: "text-amber-600", bg: "bg-amber-100" },
   news: { icon: "alternate_email", color: "text-blue-600", bg: "bg-blue-100" },
+  info: { icon: "info", color: "text-blue-500", bg: "bg-blue-50" },
+  warning: { icon: "warning", color: "text-orange-500", bg: "bg-orange-50" },
+  error: { icon: "report", color: "text-red-500", bg: "bg-red-50" },
 } as const;
 
 export default function AlertsHubPage() {
   const { alerts, setAlerts, markAlertAsRead, addAlert } = useAppStore();
+  const { hasPermission } = useRBAC();
 
   const [activeTab, setActiveTab] = useState<"alerts" | "notifications">("alerts");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,8 +45,7 @@ export default function AlertsHubPage() {
         body: JSON.stringify({
           title: newAlertData.title,
           type: newAlertData.type,
-          message: newAlertData.message,
-          date: "Ahora"
+          message: newAlertData.message
         })
       });
 
@@ -50,9 +54,13 @@ export default function AlertsHubPage() {
         addAlert(newAlert);
         setIsModalOpen(false);
         setNewAlertData({ title: "", type: "info", message: "" });
+        alert("Alerta creada con éxito");
+      } else {
+        alert("Error al crear alerta: Verifica tus permisos");
       }
     } catch (error) {
       console.error("Error creating alert:", error);
+      alert("Error de conexión");
     }
   };
 
@@ -61,9 +69,8 @@ export default function AlertsHubPage() {
   };
 
   const filteredAlerts = alerts.filter(a => {
-    // Show created alerts immediately regardless of tab if they are fresh, or stick to categories
     if (activeTab === "alerts") return a.type === "warning" || a.type === "error" || a.type === "security";
-    return a.type === "info" || a.type === "news" || a.type === "system";
+    return true;
   });
 
   return (
@@ -74,62 +81,26 @@ export default function AlertsHubPage() {
             onClick={() => setActiveTab("alerts")}
             className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 transition-all text-sm font-semibold ${activeTab === 'alerts' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' : 'text-[#85667f] dark:text-gray-400'}`}
           >
-            <span className="truncate">Alertas del Sistema</span>
+            <span className="truncate">Alertas Críticas</span>
           </button>
           <button
             onClick={() => setActiveTab("notifications")}
             className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 transition-all text-sm font-semibold ${activeTab === 'notifications' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' : 'text-[#85667f] dark:text-gray-400'}`}
           >
-            <span className="truncate">Notificaciones</span>
+            <span className="truncate">Novedades</span>
           </button>
         </div>
       </div>
 
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h3 className="text-[#171216] dark:text-white text-base font-bold tracking-tight">
-          {activeTab === "alerts" ? "Alertas Críticas" : "Novedades"}
+          {activeTab === "alerts" ? "En Tiempo Real" : "Historial"}
         </h3>
         {activeTab === "alerts" && (
           <span className="bg-red-500/10 text-red-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
-            En Vivo
+            LIVE
           </span>
         )}
-      </div>
-
-      {activeTab === "alerts" && (
-        <div className="px-4 py-2">
-          <div className="relative overflow-hidden flex items-stretch justify-between gap-4 rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border-l-4 border-primary">
-            <div className="flex flex-[3_3_0px] flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-primary text-sm">emergency_home</span>
-                  <p className="text-primary text-[11px] font-bold uppercase tracking-wider">Inactividad Detectada</p>
-                </div>
-                <p className="text-[#171216] dark:text-white text-[15px] font-bold leading-snug">
-                  Territorio: Norte - Rama: Logística
-                </p>
-                <p className="text-[#85667f] dark:text-gray-400 text-sm font-medium">
-                  Sin actividad detectada hace <span className="text-primary font-bold">3h 12m</span>
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Link
-                  className="flex items-center justify-center rounded-lg h-9 px-4 bg-primary text-white text-sm font-semibold transition-transform active:scale-95 shadow-md shadow-primary/20"
-                  href="/incidents/new"
-                >
-                  Intervenir
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="px-4 pt-8 pb-2 flex items-center justify-between">
-        <h3 className="text-[#171216] dark:text-white text-base font-bold tracking-tight">Actividad Reciente</h3>
-        <button className="text-primary text-[13px] font-semibold" onClick={handleMarkAllRead}>
-          Marcar leídas
-        </button>
       </div>
 
       <div className="px-4 space-y-3">
@@ -141,36 +112,43 @@ export default function AlertsHubPage() {
               className={`w-full text-left flex gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm items-start active:scale-[0.98] transition-transform ${alert.isRead ? "opacity-60 grayscale-[0.5]" : ""}`}
             >
               <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${alert.type === 'error' ? 'bg-red-100 text-red-600' :
-                alert.type === 'warning' ? 'bg-amber-100 text-amber-600' :
-                  'bg-blue-100 text-blue-600'}`}>
+                  alert.type === 'warning' ? 'bg-amber-100 text-amber-600' :
+                    'bg-blue-100 text-blue-600'
+                }`}>
                 <span className="material-symbols-outlined text-[20px]">
                   {alert.type === 'error' ? 'report' : alert.type === 'warning' ? 'priority_high' : 'info'}
                 </span>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <p className="text-sm text-[#171216] dark:text-white">
-                  <span className="font-bold">{alert.title}</span> {alert.message && <span>- {alert.message}</span>}
-                </p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium lowercase">
-                  {alert.date} {alert.isRead ? "(Leído)" : ""}
-                </p>
+              <div className="flex flex-col gap-0.5 w-full">
+                <div className="flex justify-between w-full">
+                  <p className="text-sm font-bold text-[#171216] dark:text-white">{alert.title}</p>
+                  <span className="text-[10px] text-gray-400">
+                    {alert.createdAt ? new Date(alert.createdAt).toLocaleDateString() : "Ahora"}
+                  </span>
+                </div>
+                {alert.message && <p className="text-xs text-gray-600 dark:text-gray-300">{alert.message}</p>}
+
+                {alert.isRead && <span className="text-[10px] text-gray-400 text-right mt-1">Leído</span>}
               </div>
             </button>
           ))
         ) : (
-          <div className="text-center text-sm text-gray-400 py-10 font-medium">No hay alertas en esta categoría.</div>
+          <div className="text-center text-sm text-gray-400 py-10 font-medium">
+            No hay alertas activas
+          </div>
         )}
       </div>
 
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-24 right-4 bg-[#851c74] text-white p-4 rounded-full shadow-lg shadow-[#851c74]/40 z-30 transition-transform active:scale-90 hover:scale-105 flex items-center gap-2 pr-6"
-      >
-        <span className="material-symbols-outlined text-2xl">add_alert</span>
-        <span className="font-bold">Nueva Alerta</span>
-      </button>
+      {hasPermission('incidents:create') && (
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-24 right-4 bg-[#851c74] text-white p-4 rounded-full shadow-lg shadow-[#851c74]/40 z-30 transition-transform active:scale-90 hover:scale-105 flex items-center gap-2 pr-6"
+        >
+          <span className="material-symbols-outlined text-2xl">add_alert</span>
+          <span className="font-bold">Nueva Alerta</span>
+        </button>
+      )}
 
-      {/* Modal de Nueva Programación */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
@@ -178,7 +156,7 @@ export default function AlertsHubPage() {
             <div className="bg-[#851c74] p-4 flex justify-between items-center text-white">
               <h3 className="font-bold flex items-center gap-2">
                 <span className="material-symbols-outlined">edit_notifications</span>
-                Nueva Programación
+                Nueva Alerta
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="hover:bg-white/20 rounded-full p-1 transition-colors">
                 <span className="material-symbols-outlined">close</span>
@@ -191,7 +169,7 @@ export default function AlertsHubPage() {
                 <input
                   required
                   type="text"
-                  placeholder="Ej: Reunión Urgente"
+                  placeholder="Ej: Conflicto en Zona Norte"
                   className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74]"
                   value={newAlertData.title}
                   onChange={(e) => setNewAlertData({ ...newAlertData, title: e.target.value })}
@@ -199,24 +177,23 @@ export default function AlertsHubPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Prioridad / Tipo</label>
                 <select
                   className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74]"
                   value={newAlertData.type}
                   onChange={(e) => setNewAlertData({ ...newAlertData, type: e.target.value as any })}
                 >
-                  <option value="info">Información</option>
-                  <option value="warning">Advertencia</option>
-                  <option value="error">Crítico</option>
-                  <option value="news">Novedad</option>
+                  <option value="info">Informativa</option>
+                  <option value="warning">Advertencia (Media)</option>
+                  <option value="error">Crítica (Alta)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Mensaje</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Detalle</label>
                 <textarea
                   rows={3}
-                  placeholder="Detalles de la alerta..."
+                  placeholder="Describa la situación..."
                   className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74]"
                   value={newAlertData.message}
                   onChange={(e) => setNewAlertData({ ...newAlertData, message: e.target.value })}
@@ -228,7 +205,7 @@ export default function AlertsHubPage() {
                   type="submit"
                   className="w-full bg-[#851c74] text-white font-bold py-3 rounded-xl shadow-lg shadow-purple-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
                 >
-                  <span>Programar Alerta</span>
+                  <span>Emitir Alerta</span>
                   <span className="material-symbols-outlined">send</span>
                 </button>
               </div>
@@ -240,7 +217,7 @@ export default function AlertsHubPage() {
       <div className="mt-8 px-4 text-center">
         <div className="inline-flex items-center gap-2 text-gray-400 dark:text-gray-500 opacity-50">
           <span className="material-symbols-outlined text-sm">verified_user</span>
-          <span className="text-[10px] font-black tracking-widest uppercase">Monitoreo Seguro Activo</span>
+          <span className="text-[10px] font-black tracking-widest uppercase">Canal Oficial Seguro</span>
         </div>
       </div>
     </main>
