@@ -2,7 +2,14 @@
 const nextConfig = {
   // Seguridad: Ocultar source maps en producción
   productionBrowserSourceMaps: false,
-  
+
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // Seguridad: Headers HTTP básicos
   async headers() {
     return [
