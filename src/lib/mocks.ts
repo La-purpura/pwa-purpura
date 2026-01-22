@@ -1,4 +1,4 @@
-export type Role = "admin" | "user";
+import { Role } from "./permissions";
 
 export interface User {
   id: string;
@@ -46,6 +46,7 @@ export interface Alert {
   date: string;
   timeAgo?: string;
   createdAt?: string;
+  territory?: string;
 }
 
 export interface Kpis {
@@ -64,13 +65,34 @@ export interface Draft {
   lastModified: string;
 }
 
+// Reutilizamos tipos de server-db.ts o redefinimos para el frontend si no compartimos
+export type ProjectStatus = 'draft' | 'submitted' | 'needs_changes' | 'approved' | 'in_progress' | 'paused' | 'completed' | 'cancelled';
+export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export interface ProjectKPI {
+  id: string;
+  name: string;
+  unit: string;
+  baseline: number;
+  target: number;
+  deadline?: string;
+}
+
 export interface Project {
   id: string;
+  code: string;
   title: string;
-  status: "planning" | "in_progress" | "on_hold" | "completed";
-  deadline: string;
-  kpis: { completed: number; total: number };
-  description?: string;
+  branch: string;
+  type: string;
+  priority: ProjectPriority;
+  status: ProjectStatus;
+  description: string;
+  kpis: ProjectKPI[];
+  deadline?: string; // Legacy support or alias for endDate
+
+  // Add other fields as optional for frontend if not always populated
+  territoryLevel?: string;
+  headquarterTerritory?: string;
 }
 
 export const mockDrafts: Draft[] = [
@@ -78,17 +100,40 @@ export const mockDrafts: Draft[] = [
   { id: "d2", title: "Informe de Visita - Escuela 404", type: "report", progress: 30, lastModified: "Ayer" },
 ];
 
+// Mock inicial para desarrollo frontend
 export const mockProjects: Project[] = [
-  { id: "p1", title: "Mejora Urbana Zona 1", status: "in_progress", deadline: "2024-03-01", kpis: { completed: 15, total: 40 }, description: "Renovación de espacios verdes." },
-  { id: "p2", title: "Campaña de Vacunación", status: "planning", deadline: "2024-04-15", kpis: { completed: 0, total: 120 }, description: "Coordinación con centros de salud." },
+  {
+    id: "p1",
+    code: "PT-2024-ZN-001",
+    title: "Mejora Urbana Zona 1",
+    branch: "Infraestructura",
+    type: "Operativo",
+    priority: "high",
+    status: "in_progress",
+    description: "Renovación completa de luminarias.",
+    kpis: [{ id: "k1", name: "Luminarias", unit: "u", baseline: 0, target: 50 }],
+    deadline: "2024-03-01"
+  },
+  {
+    id: "p2",
+    code: "PT-2024-SAL-002",
+    title: "Operativo Vacunación",
+    branch: "Salud",
+    type: "Campaña",
+    priority: "critical",
+    status: "draft",
+    description: "Campaña antigripal.",
+    kpis: [{ id: "k2", name: "Dosis", unit: "u", baseline: 0, target: 1000 }],
+    deadline: "2024-04-15"
+  }
 ];
 
 export const mockUserAdmin: User = {
   id: "admin-1",
-  name: "Admin La Púrpura",
+  name: "Super Admin Nacional",
   email: "admin@lapurpura.com",
-  role: "admin",
-  territory: "Mendoza Centro",
+  role: "SuperAdminNacional",
+  territory: "Nacional",
   avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAzx-VaGVrMQA2ZySeUcKkrzxuiAjEaqtxxWEBxoxmmheyOgzNSnl1ZUyJfchXj_o2AiYz8R1ufZOSI0ePDZBJEyKVB3rYVqInPRRtN48E5EzPRYRb92XQdgS6rDfUq4YJ6_ez1NcpTXAJhB-HP3TxlVtmH2mFuFuptl7kFYevHoHJWk8h3eRTMt2_D4RA5wSbvc-VIo5HNOqlVJR4GO8YRBZg_rIY48u7vX-BQ49IwP3eBx0D8Bby2Izvj_YOKA06dCkjkpP-oC30",
 };
 
@@ -96,8 +141,8 @@ export const mockUserRegular: User = {
   id: "user-1",
   name: "Juan Pérez",
   email: "juan.perez@lapurpura.com",
-  role: "user",
-  territory: "Godoy Cruz",
+  role: "Colaborador",
+  territory: "San Isidro",
   avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAzx-VaGVrMQA2ZySeUcKkrzxuiAjEaqtxxWEBxoxmmheyOgzNSnl1ZUyJfchXj_o2AiYz8R1ufZOSI0ePDZBJEyKVB3rYVqInPRRtN48E5EzPRYRb92XQdgS6rDfUq4YJ6_ez1NcpTXAJhB-HP3TxlVtmH2mFuFuptl7kFYevHoHJWk8h3eRTMt2_D4RA5wSbvc-VIo5HNOqlVJR4GO8YRBZg_rIY48u7vX-BQ49IwP3eBx0D8Bby2Izvj_YOKA06dCkjkpP-oC30",
 };
 
@@ -111,7 +156,7 @@ export const mockTasks: Task[] = [
     dueDate: "2024-01-25",
     priority: "high",
     category: "Operativo",
-    territory: "Zona Sur",
+    territory: "La Matanza",
     assignee: "Juan Pérez",
     subtasksDone: 15,
     subtasksTotal: 45
@@ -125,7 +170,7 @@ export const mockTasks: Task[] = [
     dueDate: "2024-01-18",
     priority: "medium",
     category: "Difusión",
-    territory: "Godoy Cruz",
+    territory: "Vicente López",
     assignee: "Maria Gomez",
     subtasksDone: 200,
     subtasksTotal: 200
@@ -139,7 +184,7 @@ export const mockTasks: Task[] = [
     dueDate: "2024-01-22",
     priority: "high",
     category: "Social",
-    territory: "Capital",
+    territory: "Quilmes",
     assignee: "Carlos Ruiz",
     subtasksDone: 0,
     subtasksTotal: 100
@@ -155,7 +200,7 @@ export const mockIncidents: Incident[] = [
     date: "2024-01-19",
     location: "Calle San Martín 1200",
     description: "Falla en el alumbrado público",
-    territory: "Zona Norte",
+    territory: "Avellaneda",
     priority: "low",
     createdAt: new Date().toISOString()
   },
@@ -167,15 +212,15 @@ export const mockIncidents: Incident[] = [
     date: "2024-01-18",
     location: "Espana y Rivadavia",
     description: "Acumulación de residuos en esquina",
-    territory: "Zona Este",
+    territory: "Lanús",
     priority: "medium",
     createdAt: new Date().toISOString()
   },
 ];
 
 export const mockAlerts: Alert[] = [
-  { id: "a1", title: "Nueva tarea asignada", message: "Se te ha asignado 'Censo B. La Gloria'", type: "info", isRead: false, date: "Hace 5 min", timeAgo: "5m", createdAt: new Date().toISOString() },
-  { id: "a2", title: "Alerta climática: Granizo", message: "Se pronostica granizo severo en zona Este", type: "warning", isRead: false, date: "Hace 1 hora", timeAgo: "1h", createdAt: new Date(Date.now() - 3600000).toISOString() },
+  { id: "a1", title: "Nueva tarea asignada", message: "Se te ha asignado 'Censo B. La Gloria'", type: "info", isRead: false, date: "Hace 5 min", timeAgo: "5m", createdAt: new Date().toISOString(), territory: "La Matanza" },
+  { id: "a2", title: "Alerta climática: Granizo", message: "Se pronostica granizo severo en zona Este", type: "warning", isRead: false, date: "Hace 1 hora", timeAgo: "1h", createdAt: new Date(Date.now() - 3600000).toISOString(), territory: "Zona Este" },
   { id: "a3", title: "Sistema Inactivo", message: "Mantenimiento programado 22:00hs", type: "system", isRead: true, date: "Ayer", timeAgo: "1d", createdAt: new Date(Date.now() - 86400000).toISOString() },
 ];
 
@@ -230,4 +275,4 @@ export const mockUsers = [
   mockUserRegular
 ];
 
-export const mockUser = mockUserRegular;
+export const mockUser = mockUserAdmin;

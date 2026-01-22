@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
+import { ELECTORAL_SECTIONS } from "@/lib/constants";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -41,28 +42,18 @@ export default function TerritoryHierarchyPage() {
     const router = useRouter();
 
     // Mock Hierarchy Data
+    // Build hierarchy from constants
     const hierarchy = {
-        name: "Mendoza",
+        name: "Buenos Aires",
         type: "province",
-        children: [
-            {
-                name: "Gran Mendoza",
-                type: "region",
-                children: [
-                    { name: "Godoy Cruz", type: "department", children: [{ name: "Villa Hipódromo", type: "zone" }, { name: "Centro", type: "zone" }] },
-                    { name: "Capital", type: "department", children: [{ name: "Sexta Sección", type: "zone" }] },
-                    { name: "Guaymallén", type: "department" }
-                ]
-            },
-            {
-                name: "Valle de Uco",
-                type: "region",
-                children: [
-                    { name: "Tunuyán", type: "department" },
-                    { name: "Tupungato", type: "department" }
-                ]
-            }
-        ]
+        children: ELECTORAL_SECTIONS.map(section => ({
+            name: section.name,
+            type: "region",
+            children: section.districts.map(district => ({
+                name: district,
+                type: "district"
+            }))
+        }))
     };
 
     return (

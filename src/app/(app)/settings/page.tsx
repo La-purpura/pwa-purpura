@@ -1,203 +1,168 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
+import { useAppStore } from "@/lib/store";
+import { Role, ROLE_LABELS } from "@/lib/permissions";
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const { user, setUser } = useAppStore();
+  const { theme, setTheme } = useTheme();
+  const [notifications, setNotifications] = useState(true);
+  const [location, setLocation] = useState(true);
+
   return (
-    <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark font-manrope">
-      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-white/10 px-4 pt-12 pb-3 transition-colors duration-300">
-        <div className="flex items-center justify-between max-w-2xl mx-auto w-full">
-          <h1 className="text-3xl font-bold tracking-tight text-primary dark:text-white">Ajustes</h1>
-        </div>
+    <main className="min-h-screen bg-background-light dark:bg-background-dark p-6 pb-24 text-[#171216] dark:text-white">
+      <header className="flex items-center gap-4 mb-8">
+        <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-primary">
+          <span className="material-symbols-outlined">arrow_back</span>
+        </button>
+        <h1 className="text-2xl font-bold">Configuración</h1>
       </header>
 
-      <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-6 flex flex-col gap-6 pb-24">
-        <section className="relative overflow-hidden rounded-2xl bg-surface-light dark:bg-surface-dark shadow-soft border border-transparent dark:border-white/10 cursor-pointer transition-all active:scale-[0.99]">
-          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
-          <div className="flex items-center p-4 gap-4 relative z-10">
-            <div className="relative shrink-0">
-              <div
-                className="w-16 h-16 rounded-full bg-cover bg-center ring-2 ring-white dark:ring-white/10 shadow-sm"
-                style={{
-                  backgroundImage:
-                    "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCbY0VdWjN9GW4XpF-Br1q7EM3UlLdg5eyojIE4M0gWRwGtc8u8MqBbUDgkbP--MaY1FyUw8AMNQvwL0sQCY7XJnD28LCVZcpHh9tkKfkBW7kiEu9jX2XU_VW2EWwrSv3ZoapRInI6l5a9IkSOnt0kCvPHCRzlXmse96yI9CyNDpn8p2_3cKn1cIUftb6PHMCQJXT0kmJTtDAoOPxGvc-6GYxFZ2pgQLDKdlFB5_ahe25v3NCkoNG7IzWF6kNfrXD7MMwpGdvSoyzY')",
-                }}
-              ></div>
-              <div className="absolute bottom-0 right-0 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-[#1c1c1e]"></div>
+      <div className="space-y-6">
+        {/* Preferencias de App */}
+        <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
+          <h2 className="px-6 pt-6 pb-2 text-xs font-bold uppercase text-gray-400">Preferencias</h2>
+
+          <div className="p-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                <span className="material-symbols-outlined">notifications</span>
+              </div>
+              <div>
+                <p className="font-bold">Notificaciones Push</p>
+                <p className="text-xs text-gray-500">Alertas y mensajes</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold truncate">María González</h2>
-              <p className="text-primary font-medium text-sm truncate">Supervisora de Zona • ID: #8821</p>
-              <p className="text-text-sec-light dark:text-text-sec-dark text-xs mt-0.5">maria.gonzalez@lapurpura.com</p>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={notifications} onChange={() => setNotifications(!notifications)} className="sr-only peer" />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+
+          <div className="p-4 flex flex-col gap-3 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+                <span className="material-symbols-outlined">dark_mode</span>
+              </div>
+              <div>
+                <p className="font-bold">Apariencia</p>
+                <p className="text-xs text-gray-500">Tema de la interfaz</p>
+              </div>
             </div>
-            <span className="material-symbols-outlined text-gray-300 dark:text-gray-600">chevron_right</span>
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold text-text-sec-light dark:text-text-sec-dark uppercase tracking-wider ml-4 mb-2">
-            General
-          </h3>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden shadow-soft border border-transparent dark:border-white/10 divide-y divide-gray-100 dark:divide-white/5">
-            <SettingsRow icon="notifications" title="Notificaciones" />
-            <SettingsRow icon="palette" title="Apariencia" value="Automático" />
-            <SettingsRow icon="language" title="Idioma" value="Español (MX)" />
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold text-text-sec-light dark:text-text-sec-dark uppercase tracking-wider ml-4 mb-2">
-            Operaciones en Campo
-          </h3>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden shadow-soft border border-transparent dark:border-white/10 divide-y divide-gray-100 dark:divide-white/5">
-            <SettingsRow
-              icon="sync"
-              title="Sincronización"
-              value="Hace 2 min • Correcto"
-            />
-            <ToggleRow icon="wifi_off" title="Modo Offline" checked={false} />
-            <ToggleRow icon="location_on" title="Rastreo en 2do plano" subtitle="Requerido para bitácora" checked />
-          </div>
-        </section>
-
-        <section>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden shadow-soft border border-transparent dark:border-white/10">
-            <button className="w-full p-4 flex items-center justify-center text-[17px] font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 active:opacity-70 transition-colors">
-              Cerrar Sesión
-            </button>
-          </div>
-          <div className="flex flex-col items-center justify-center mt-6 mb-4 gap-1">
-            <p className="text-xs text-text-sec-light dark:text-text-sec-dark font-medium">
-              La Púrpura Gestión v2.4.1 (Build 204)
-            </p>
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest">Powered by PurpleTech</p>
-          </div>
-        </section>
-      </main>
-
-      <nav className="fixed bottom-0 w-full bg-surface-light dark:bg-[#161618] border-t border-gray-200 dark:border-white/5 pb-safe z-50">
-        <div className="flex items-center justify-around h-[83px] max-w-2xl mx-auto pb-4">
-          <NavLink href="/home" icon="home" label="Inicio" />
-          <NavLink href="/tasks" icon="assignment" label="Tareas" />
-          <Link
-            href="/map"
-            className="relative flex flex-col items-center justify-center w-full h-full text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary transition-colors group"
-          >
-            <div className="absolute -top-6 bg-primary rounded-full p-3 shadow-lg shadow-primary/30 border-4 border-background-light dark:border-background-dark group-active:scale-95 transition-transform">
-              <span className="material-symbols-outlined text-white">map</span>
+            <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
+              <button
+                onClick={() => setTheme("light")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${theme === "light" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              >
+                <span className="material-symbols-outlined text-sm">light_mode</span>
+                Claro
+              </button>
+              <button
+                onClick={() => setTheme("dark")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${theme === "dark" ? "bg-gray-800 text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              >
+                <span className="material-symbols-outlined text-sm">dark_mode</span>
+                Oscuro
+              </button>
+              <button
+                onClick={() => setTheme("system")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${theme === "system" ? "bg-white dark:bg-gray-600 text-primary dark:text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              >
+                <span className="material-symbols-outlined text-sm">settings_brightness</span>
+                Sistema
+              </button>
             </div>
-            <span className="text-[10px] font-medium mt-8">Ruta</span>
-          </Link>
-          <NavLink href="/reports" icon="bar_chart" label="Reportes" />
-          <NavLink href="/settings" icon="settings" label="Ajustes" iconFilled />
-        </div>
-      </nav>
-      <div className="h-[83px]"></div>
-    </div>
-  );
-}
+          </div>
 
-type SettingsRowProps = {
-  icon: string;
-  title: string;
-  value?: string;
-};
+          <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
+                <span className="material-symbols-outlined">location_on</span>
+              </div>
+              <div>
+                <p className="font-bold">Ubicación GPS</p>
+                <p className="text-xs text-gray-500">Mejora relevamientos</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={location} onChange={() => setLocation(!location)} className="sr-only peer" />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+        </section>
 
-function SettingsRow({ icon, title, value }: SettingsRowProps) {
-  return (
-    <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-      <div className="flex items-center gap-3">
-        <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconStyle(icon)}`}
-        >
-          <span className="material-symbols-outlined text-[20px]">{icon}</span>
-        </div>
-        <span className="font-medium text-[17px]">{title}</span>
+        {/* Cache y Datos */}
+        <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4">
+          <button className="w-full flex items-center justify-between text-red-500 font-bold">
+            <span className="flex items-center gap-2">
+              <span className="material-symbols-outlined">delete_outline</span>
+              Borrar datos del dispositivo
+            </span>
+            <span className="text-xs bg-red-50 px-2 py-1 rounded">24 MB</span>
+          </button>
+        </section>
+
+        {/* Developer Tools - Role Switcher */}
+        <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-700">
+          <div className="bg-gray-50 dark:bg-gray-900 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h2 className="text-xs font-bold uppercase text-gray-500 flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm">construction</span>
+              Debug Tools
+            </h2>
+            <span className="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-bold">DEV ONLY</span>
+          </div>
+
+          <div className="p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 font-medium">Simular Rol de Usuario:</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(Object.entries(ROLE_LABELS) as [Role, string][]).map(([roleKey, label]) => {
+                const isActive = user?.role === roleKey;
+                return (
+                  <button
+                    key={roleKey}
+                    onClick={() => {
+                      if (user) {
+                        // Update role and set appropriate territory mock
+                        const newTerritory = roleKey === "SuperAdminNacional" || roleKey === "AdminNacional" ? "Nacional"
+                          : roleKey === "AdminProvincial" ? "Buenos Aires"
+                            : "San Isidro";
+
+                        setUser({ ...user, role: roleKey, territory: newTerritory });
+                      }
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${isActive
+                      ? "border-[#851c74] bg-[#851c74] text-white shadow-md"
+                      : "border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                      }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isActive ? "bg-white text-[#851c74]" : "bg-gray-100 dark:bg-gray-800"
+                      }`}>
+                      {label.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-bold truncate ${isActive ? "text-white" : "text-gray-800 dark:text-gray-200"}`}>{label}</p>
+                      <p className={`text-[10px] truncate ${isActive ? "text-white/80" : "text-gray-400"}`}>{roleKey}</p>
+                    </div>
+                    {isActive && <span className="material-symbols-outlined text-sm">check_circle</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 text-xs rounded-lg flex items-start gap-2">
+              <span className="material-symbols-outlined text-sm mt-0.5">info</span>
+              <p>
+                Al cambiar de rol, el Sidebar, Dashboard y CommandPalette se actualizarán inmediatamente para reflejar los permisos de <strong>{ROLE_LABELS[user?.role || "SuperAdminNacional"]}</strong>.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
-      <div className="flex items-center gap-2">
-        {value && (
-          <span className="text-text-sec-light dark:text-text-sec-dark text-[17px]">{value}</span>
-        )}
-        <span className="material-symbols-outlined text-gray-300 dark:text-gray-600 group-hover:text-gray-400">
-          chevron_right
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ToggleRow({
-  icon,
-  title,
-  subtitle,
-  checked = false,
-}: {
-  icon: string;
-  title: string;
-  subtitle?: string;
-  checked?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between p-4">
-      <div className="flex items-center gap-3">
-        <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconStyle(icon)}`}
-        >
-          <span className="material-symbols-outlined text-[20px]">{icon}</span>
-        </div>
-        <div className="flex flex-col">
-          <span className="font-medium text-[17px]">{title}</span>
-          {subtitle && (
-            <span className="text-xs text-text-sec-light dark:text-text-sec-dark">{subtitle}</span>
-          )}
-        </div>
-      </div>
-      <label className="relative inline-flex items-center cursor-pointer">
-        <input className="sr-only peer" type="checkbox" checked={checked} readOnly />
-        <div className="w-[51px] h-[31px] bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[27px] after:w-[27px] after:transition-all peer-checked:bg-primary after:shadow-sm"></div>
-      </label>
-    </div>
-  );
-}
-
-function iconStyle(icon: string) {
-  switch (icon) {
-    case "notifications":
-      return "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400";
-    case "palette":
-      return "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400";
-    case "language":
-      return "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400";
-    case "sync":
-      return "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400";
-    case "wifi_off":
-      return "bg-purple-100 dark:bg-purple-900/30 text-primary dark:text-purple-300";
-    case "location_on":
-      return "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400";
-    default:
-      return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
-  }
-}
-
-type NavLinkProps = {
-  href: string;
-  icon: string;
-  label: string;
-  iconFilled?: boolean;
-  labelText?: string;
-};
-
-function NavLink({ href, icon, label, iconFilled, labelText }: NavLinkProps) {
-  return (
-    <Link
-      href={href}
-      className="flex flex-col items-center justify-center w-full h-full text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary transition-colors group"
-    >
-      <span
-        className={`mb-1 ${iconFilled ? "material-symbols-filled" : "material-symbols-outlined"}`}
-        style={{ fontSize: "24px" }}
-      >
-        {icon}
-      </span>
-      <span className="text-[10px] font-medium">{labelText ?? label}</span>
-    </Link>
+    </main>
   );
 }

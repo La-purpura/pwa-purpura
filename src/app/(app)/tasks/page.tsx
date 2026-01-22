@@ -1,15 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 
 export default function TasksPage() {
   const router = useRouter();
-  const tasks = useAppStore((state) => state.tasks);
+  const { tasks, setTasks, user } = useAppStore();
+
+  useEffect(() => {
+    fetch('/api/tasks')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setTasks(data);
+      })
+      .catch(console.error);
+  }, [setTasks]);
 
   const [activeFilter, setActiveFilter] = useState("all");
-  const user = useAppStore((state) => state.user);
 
   const filteredTasks = useMemo(() => {
     let filtered = tasks;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 
@@ -11,16 +11,57 @@ const alertIcons = {
 } as const;
 
 export default function AlertsHubPage() {
-  const alerts = useAppStore((state) => state.alerts);
-  const markAlertAsRead = useAppStore((state) => state.markAlertAsRead);
+  const { alerts, setAlerts, markAlertAsRead, addAlert } = useAppStore();
+
+  const [activeTab, setActiveTab] = useState<"alerts" | "notifications">("alerts");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newAlertData, setNewAlertData] = useState({
+    title: "",
+    type: "info" as "info" | "warning" | "error" | "news",
+    message: ""
+  });
+
+  // Fetch alerts from API
+  useEffect(() => {
+    fetch('/api/alerts')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setAlerts(data);
+      })
+      .catch(err => console.error("Error loading alerts:", err));
+  }, [setAlerts]);
+
+  const handleCreateAlert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newAlertData.title,
+          type: newAlertData.type,
+          message: newAlertData.message,
+          date: "Ahora"
+        })
+      });
+
+      if (res.ok) {
+        const newAlert = await res.json();
+        addAlert(newAlert);
+        setIsModalOpen(false);
+        setNewAlertData({ title: "", type: "info", message: "" });
+      }
+    } catch (error) {
+      console.error("Error creating alert:", error);
+    }
+  };
 
   const handleMarkAllRead = () => {
     alerts.forEach((alert) => markAlertAsRead(alert.id));
   };
 
-  const [activeTab, setActiveTab] = useState<"alerts" | "notifications">("alerts");
-
   const filteredAlerts = alerts.filter(a => {
+    // Show created alerts immediately regardless of tab if they are fresh, or stick to categories
     if (activeTab === "alerts") return a.type === "warning" || a.type === "error" || a.type === "security";
     return a.type === "info" || a.type === "news" || a.type === "system";
   });
@@ -120,6 +161,81 @@ export default function AlertsHubPage() {
           <div className="text-center text-sm text-gray-400 py-10 font-medium">No hay alertas en esta categoría.</div>
         )}
       </div>
+
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="fixed bottom-24 right-4 bg-[#851c74] text-white p-4 rounded-full shadow-lg shadow-[#851c74]/40 z-30 transition-transform active:scale-90 hover:scale-105 flex items-center gap-2 pr-6"
+      >
+        <span className="material-symbols-outlined text-2xl">add_alert</span>
+        <span className="font-bold">Nueva Alerta</span>
+      </button>
+
+      {/* Modal de Nueva Programación */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-[#851c74] p-4 flex justify-between items-center text-white">
+              <h3 className="font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined">edit_notifications</span>
+                Nueva Programación
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="hover:bg-white/20 rounded-full p-1 transition-colors">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAlert} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Título</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="Ej: Reunión Urgente"
+                  className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74]"
+                  value={newAlertData.title}
+                  onChange={(e) => setNewAlertData({ ...newAlertData, title: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo</label>
+                <select
+                  className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74]"
+                  value={newAlertData.type}
+                  onChange={(e) => setNewAlertData({ ...newAlertData, type: e.target.value as any })}
+                >
+                  <option value="info">Información</option>
+                  <option value="warning">Advertencia</option>
+                  <option value="error">Crítico</option>
+                  <option value="news">Novedad</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Mensaje</label>
+                <textarea
+                  rows={3}
+                  placeholder="Detalles de la alerta..."
+                  className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74]"
+                  value={newAlertData.message}
+                  onChange={(e) => setNewAlertData({ ...newAlertData, message: e.target.value })}
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full bg-[#851c74] text-white font-bold py-3 rounded-xl shadow-lg shadow-purple-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                >
+                  <span>Programar Alerta</span>
+                  <span className="material-symbols-outlined">send</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 px-4 text-center">
         <div className="inline-flex items-center gap-2 text-gray-400 dark:text-gray-500 opacity-50">

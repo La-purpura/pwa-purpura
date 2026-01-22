@@ -73,7 +73,7 @@ export default function HomePage() {
     <div className="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark transition-colors duration-300 min-h-screen flex flex-col antialiased">
       <main className="flex-1 px-5 py-6 space-y-6 overflow-y-auto hide-scrollbar">
         <section>
-          <h2 className="text-2xl font-bold mb-4">Hola, {user?.name ?? "Ricardo"}</h2>
+          <h2 className="text-2xl font-bold mb-4">Hola, {user?.name ?? "Compañero"}</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-soft flex flex-col justify-between h-32 border border-gray-100 dark:border-gray-800 relative overflow-hidden group">
               <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -81,12 +81,12 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-2 text-primary">
                 <span className="material-icons-round">assignment</span>
-                <span className="text-sm font-medium">Pending Tasks</span>
+                <span className="text-sm font-medium">Pendientes</span>
               </div>
               <div>
                 <span className="text-3xl font-bold">{pendingTasks}</span>
                 <p className="text-xs text-text-sub-light dark:text-text-sub-dark">
-                  High priority: {highPriorityCount}
+                  Prioridad alta: {highPriorityCount}
                 </p>
               </div>
             </div>
@@ -94,11 +94,11 @@ export default function HomePage() {
               <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
               <div className="flex items-center gap-2 text-white/90">
                 <span className="material-icons-round animate-spin text-sm">sync</span>
-                <span className="text-sm font-medium">Syncing...</span>
+                <span className="text-sm font-medium">Sincronizando</span>
               </div>
               <div>
                 <span className="text-3xl font-bold">{syncPercent}%</span>
-                <p className="text-xs text-white/70">Uploading data</p>
+                <p className="text-xs text-white/70">Subiendo datos...</p>
               </div>
               <div className="w-full bg-white/20 h-1.5 rounded-full mt-2 overflow-hidden">
                 <div className="bg-white h-full rounded-full" style={{ width: `${syncPercent}%` }}></div>
@@ -110,10 +110,10 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <span className="material-icons-round text-warning text-base">cloud_off</span>
-              Offline Queue
+              Cola Offline
             </h3>
             <span className="bg-warning/10 text-warning px-2 py-0.5 rounded text-xs font-bold">
-              {queueCount} Items
+              {queueCount} Ítems
             </span>
           </div>
           <div className="bg-card-light dark:bg-card-dark rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -130,7 +130,7 @@ export default function HomePage() {
                   <div className="flex-1">
                     <h4 className="font-semibold text-sm">{item.title}</h4>
                     <p className="text-xs text-text-sub-light dark:text-text-sub-dark">
-                      {meta.subtitle} •3 {timeLabel}
+                      {meta.subtitle} • {timeLabel}
                     </p>
                   </div>
                   <div className="shrink-0 flex items-center gap-2">
@@ -147,21 +147,21 @@ export default function HomePage() {
                 href="/offline-queue"
                 className="text-primary text-sm font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity"
               >
-                View All Queue
+                Ver cola completa
                 <span className="material-icons-round text-sm">chevron_right</span>
               </Link>
             </div>
           </div>
         </section>
         <section>
-          <h3 className="text-lg font-bold mb-3">Quick Actions</h3>
-          <div className="grid grid-cols-4 gap-3 text-center">
+          <h3 className="text-lg font-bold mb-3">Acciones Rápidas</h3>
+          <div className="grid grid-cols-3 gap-3 text-center">
             <Link href="/new-task" className="flex flex-col items-center gap-2 group">
               <div className="w-14 h-14 rounded-2xl bg-white dark:bg-card-dark shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center group-active:scale-95 transition-transform">
                 <span className="material-icons-round text-primary text-2xl">add_circle</span>
               </div>
               <span className="text-xs font-medium text-text-sub-light dark:text-text-sub-dark">
-                New Task
+                Nueva Tarea
               </span>
             </Link>
             <Link href="/scan" className="flex flex-col items-center gap-2 group">
@@ -169,23 +169,16 @@ export default function HomePage() {
                 <span className="material-icons-round text-primary text-2xl">qr_code_scanner</span>
               </div>
               <span className="text-xs font-medium text-text-sub-light dark:text-text-sub-dark">
-                Scan
+                Escanear
               </span>
             </Link>
-            <Link href="/map" className="flex flex-col items-center gap-2 group">
-              <div className="w-14 h-14 rounded-2xl bg-white dark:bg-card-dark shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center group-active:scale-95 transition-transform">
-                <span className="material-icons-round text-primary text-2xl">map</span>
-              </div>
-              <span className="text-xs font-medium text-text-sub-light dark:text-text-sub-dark">
-                Map
-              </span>
-            </Link>
+            {/* Map Removed */}
             <Link href="/history" className="flex flex-col items-center gap-2 group">
               <div className="w-14 h-14 rounded-2xl bg-white dark:bg-card-dark shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center group-active:scale-95 transition-transform">
                 <span className="material-icons-round text-primary text-2xl">history</span>
               </div>
               <span className="text-xs font-medium text-text-sub-light dark:text-text-sub-dark">
-                History
+                Historial
               </span>
             </Link>
           </div>
@@ -501,7 +494,7 @@ export default function HomePage() {
           </Link>
         </section>
         <section>
-          <h3 className="text-lg font-bold mb-3">Today&apos;s Activity</h3>
+          <h3 className="text-lg font-bold mb-3">Actividad Reciente</h3>
           <div className="space-y-3">
             <div className="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-soft flex items-start gap-3 border-l-4 border-success">
               <div className="mt-0.5">
@@ -510,12 +503,12 @@ export default function HomePage() {
                 </span>
               </div>
               <div>
-                <h4 className="text-sm font-semibold">Equipment Check Complete</h4>
+                <h4 className="text-sm font-semibold">Validación de equipo completa</h4>
                 <p className="text-xs text-text-sub-light dark:text-text-sub-dark mt-0.5">
-                  Verified inventory at North Warehouse.
+                  Inventario verificado en almacén Norte.
                 </p>
                 <span className="text-[10px] text-text-sub-light/70 dark:text-text-sub-dark/70 mt-2 block">
-                  1 hour ago
+                  Hace 1 hora
                 </span>
               </div>
             </div>
@@ -526,12 +519,12 @@ export default function HomePage() {
                 </span>
               </div>
               <div>
-                <h4 className="text-sm font-semibold">Route Updated</h4>
+                <h4 className="text-sm font-semibold">Ruta Actualizada</h4>
                 <p className="text-xs text-text-sub-light dark:text-text-sub-dark mt-0.5">
-                  Optimization applied for afternoon schedule.
+                  Optimización aplicada para el turno tarde.
                 </p>
                 <span className="text-[10px] text-text-sub-light/70 dark:text-text-sub-dark/70 mt-2 block">
-                  3 hours ago
+                  Hace 3 horas
                 </span>
               </div>
             </div>

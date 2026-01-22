@@ -7,6 +7,13 @@ import {
   mockUserRegular, mockTasks, mockIncidents, mockAlerts, mockKpis, mockDrafts, mockProjects, mockNews, mockUsers, mockReports
 } from "./mocks";
 
+// Announcement Types
+export interface Announcement {
+  message: string;
+  type: 'info' | 'warning' | 'alert' | 'success';
+  isActive: boolean;
+}
+
 interface AppState {
   // Auth
   user: User | null;
@@ -51,6 +58,16 @@ interface AppState {
   // KPIs
   kpis: Kpis;
   updateKpis: (kpis: Partial<Kpis>) => void;
+
+  // UI State
+  territoryFilter: { section: string; district: string | null };
+  setTerritoryFilter: (filter: { section: string; district: string | null }) => void;
+
+  // Global Broadcast System
+  globalAnnouncement: Announcement | null;
+  setGlobalAnnouncement: (announcement: Announcement | null) => void;
+  isBroadcastModalOpen: boolean;
+  setBroadcastModalOpen: (isOpen: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -101,6 +118,16 @@ export const useAppStore = create<AppState>()(
       // KPIs
       kpis: mockKpis,
       updateKpis: (newKpis) => set((state) => ({ kpis: { ...state.kpis, ...newKpis } })),
+
+      // UI State
+      territoryFilter: { section: "all", district: null },
+      setTerritoryFilter: (filter) => set({ territoryFilter: filter }),
+
+      // Broadcast Defaults
+      globalAnnouncement: null,
+      setGlobalAnnouncement: (announcement) => set({ globalAnnouncement: announcement }),
+      isBroadcastModalOpen: false,
+      setBroadcastModalOpen: (isOpen) => set({ isBroadcastModalOpen: isOpen }),
     }),
     {
       name: "lp-pwa-storage",

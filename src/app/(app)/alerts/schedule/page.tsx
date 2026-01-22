@@ -1,219 +1,190 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 
-export default function AlertsSchedulePage() {
+export default function ScheduleAlertPage() {
   const router = useRouter();
+  const alerts = useAppStore((state) => state.alerts);
   const addAlert = useAppStore((state) => state.addAlert);
 
-  const [title, setTitle] = useState("");
-  const [message, setMessage] = useState("");
-  const [type, setType] = useState<"news" | "warning" | "info">("news");
-  const [scheduleNow, setScheduleNow] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    date: "",
+    time: "",
+    segment: "all",
+    message: ""
+  });
 
-  const handleSchedule = () => {
-    if (!title.trim() || !message.trim()) return;
+  // Simulamos que las alertas de tipo 'news' o futuras son las programadas
+  const scheduledAlerts = alerts.filter(a => a.type === 'news' || a.title.includes("Programada"));
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
     const newAlert = {
-      id: Math.random().toString(36).substr(2, 9),
-      title: title,
-      message: message,
-      type: type,
+      id: Date.now().toString(),
+      title: `[Programada] ${formData.title}`,
+      type: "news" as const, // Forzamos tipo news para demo
+      message: `${formData.message} (Para: ${formData.segment})`,
       isRead: false,
-      date: scheduleNow ? "Ahora" : "Programado",
-      timeAgo: "Justo ahora",
-      createdAt: new Date().toISOString(),
+      date: `${formData.date} ${formData.time}`,
+      createdAt: new Date().toISOString()
     };
 
     addAlert(newAlert);
-    router.push("/alerts");
+    setIsModalOpen(false);
+    setFormData({ title: "", date: "", time: "", segment: "all", message: "" });
   };
 
   return (
-    <div className="bg-background-light dark:bg-background-dark min-h-screen text-[#171216] dark:text-white antialiased">
-      <div className="relative flex h-auto min-h-screen w-full flex-col max-w-[480px] mx-auto overflow-x-hidden">
-        <header className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-          <div className="flex items-center justify-between px-4 py-4">
-            <Link href="/alerts" className="text-primary text-base font-medium">
-              Cancelar
-            </Link>
-            <h2 className="text-[#171216] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] text-center flex-1 px-4">
-              Programar Notificación
-            </h2>
-            <div className="w-12"></div>
-          </div>
-        </header>
-
-        <main className="flex-1 pb-24">
-          <div className="px-4 pt-6 pb-2">
-            <h3 className="text-[#171216] dark:text-white text-xl font-bold leading-tight tracking-tight">Contenido de la Alerta</h3>
-          </div>
-
-          <div className="mx-4 mb-6 p-4 bg-white dark:bg-gray-900 rounded-xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] space-y-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-[#171216] dark:text-gray-300 px-1">
-                Título de la notificación
-              </p>
-              <input
-                className="form-input w-full rounded-lg border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 text-base text-[#171216] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary h-12 px-4 placeholder:text-[#85667f]"
-                placeholder="Ej: Importante: Cambio de Sede"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between items-center px-1">
-                <p className="text-sm font-semibold text-[#171216] dark:text-gray-300">Mensaje corto</p>
-                <p className="text-xs font-normal text-[#85667f] dark:text-gray-400">{message.length} / 120</p>
-              </div>
-              <textarea
-                className="form-input w-full rounded-lg border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 text-base text-[#171216] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary min-h-[120px] px-4 py-3 placeholder:text-[#85667f] resize-none leading-tight"
-                placeholder="Escribe el mensaje de la alerta..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                maxLength={120}
-              />
-            </div>
-          </div>
-
-          <div className="px-4 py-2">
-            <h3 className="text-lg font-bold text-[#171216] dark:text-white leading-tight">Interacción</h3>
-          </div>
-          <div className="mx-4 mb-6 p-4 bg-white dark:bg-gray-900 rounded-xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)]">
-            <p className="text-sm font-semibold text-[#171216] dark:text-gray-300 pb-3 px-1">Acción al pulsar</p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => setType("news")}
-                className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 py-3 text-[10px] font-bold uppercase tracking-wider transition-colors ${type === 'news' ? 'border-primary bg-primary/5 text-primary' : 'border-transparent bg-gray-50 dark:bg-gray-800 text-gray-500'}`}
-              >
-                <span className="material-symbols-outlined text-[18px]">newspaper</span>
-                Novedad
-              </button>
-              <button
-                onClick={() => setType("info")}
-                className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 py-3 text-[10px] font-bold uppercase tracking-wider transition-colors ${type === 'info' ? 'border-primary bg-primary/5 text-primary' : 'border-transparent bg-gray-50 dark:bg-gray-800 text-gray-500'}`}
-              >
-                <span className="material-symbols-outlined text-[18px]">calendar_today</span>
-                Evento
-              </button>
-              <button
-                onClick={() => setType("warning")}
-                className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 py-3 text-[10px] font-bold uppercase tracking-wider transition-colors ${type === 'warning' ? 'border-primary bg-primary/5 text-primary' : 'border-transparent bg-gray-50 dark:bg-gray-800 text-gray-500'}`}
-              >
-                <span className="material-symbols-outlined text-[18px]">assignment</span>
-                Relevamiento
-              </button>
-            </div>
-          </div>
-
-          <div className="px-4 py-2">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-[#171216] dark:text-white leading-tight">Segmentación</h3>
-              <span className="bg-red-100 text-red-600 text-[10px] uppercase tracking-tight px-1.5 py-0.5 rounded font-bold">Obligatorio</span>
-            </div>
-          </div>
-          <div className="mx-4 mb-6 p-4 bg-white dark:bg-gray-900 rounded-xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] space-y-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-[#171216] dark:text-gray-300">Seleccionar Rama</p>
-              <select className="form-select w-full rounded-lg border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm h-11 focus:border-primary focus:ring-1 focus:ring-primary">
-                <option>Todas las Ramas</option>
-                <option>Lobatos</option>
-                <option>Scouts</option>
-                <option>Caminantes</option>
-                <option>Rovers</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-[#171216] dark:text-gray-300">Territorio / Zona</p>
-              <select className="form-select w-full rounded-lg border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm h-11 focus:border-primary focus:ring-1 focus:ring-primary">
-                <option>Seleccionar Zona/Distrito</option>
-                <option>Zona 1 - Centro</option>
-                <option>Zona 2 - Norte</option>
-                <option>Zona 3 - Sur</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="px-4 py-2">
-            <h3 className="text-lg font-bold text-[#171216] dark:text-white leading-tight">Programación</h3>
-          </div>
-          <div className="mx-4 mb-6 p-4 bg-white dark:bg-gray-900 rounded-xl shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-gray-500">schedule</span>
-                <span className="text-sm font-medium text-[#171216] dark:text-gray-300">Enviar ahora</span>
-              </div>
-              <div className="relative inline-block w-10 select-none">
-                <input
-                  checked={scheduleNow}
-                  onChange={(e) => setScheduleNow(e.target.checked)}
-                  className="toggle-checkbox absolute block w-5 h-5 rounded-full border-4 border-gray-300 bg-white appearance-none cursor-pointer transition-all duration-300 right-5 checked:right-0 checked:border-primary"
-                  id="schedule-toggle"
-                  name="schedule-toggle"
-                  type="checkbox"
-                />
-                <label
-                  className={`toggle-label block h-5 rounded-full cursor-pointer transition-colors ${scheduleNow ? 'bg-primary' : 'bg-gray-300'}`}
-                  htmlFor="schedule-toggle"
-                ></label>
-              </div>
-            </div>
-            {!scheduleNow && (
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-800 mt-2">
-                <div className="flex flex-col">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase mb-1">Fecha</p>
-                  <input type="date" className="rounded-lg bg-gray-50 dark:bg-gray-800 p-2 text-xs text-gray-600 dark:text-gray-300 border-none w-full" />
-                </div>
-                <div className="flex flex-col">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase mb-1">Hora</p>
-                  <input type="time" className="rounded-lg bg-gray-50 dark:bg-gray-800 p-2 text-xs text-gray-600 dark:text-gray-300 border-none w-full" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="px-4 py-4 mt-4">
-            <p className="text-center text-[#85667f] dark:text-gray-400 text-sm font-medium uppercase tracking-widest mb-3">
-              Vista Previa Mobile
-            </p>
-            <div className="relative w-64 mx-auto aspect-[9/16] rounded-[2.5rem] border-[6px] border-[#171216] overflow-hidden bg-gradient-to-br from-[#1c1c1c] to-[#4a4a4a] p-3 shadow-2xl">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-[#171216] rounded-b-xl"></div>
-              <div className="mt-20">
-                <div className="lock-screen-glass rounded-2xl p-3 shadow-lg bg-white/10 backdrop-blur-md">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="size-5 bg-primary rounded flex items-center justify-center">
-                        <span className="text-white text-[8px] font-bold">LP</span>
-                      </div>
-                      <span className="text-[10px] font-semibold text-white uppercase tracking-wide">La Púrpura</span>
-                    </div>
-                    <span className="text-[9px] text-gray-300">ahora</span>
-                  </div>
-                  <p className="text-[11px] font-bold text-white mb-1">{title || "Título de la notificación"}</p>
-                  <p className="text-[11px] text-gray-200 leading-snug">
-                    {message || "Escribe el mensaje de la alerta... este texto se verá reflejado aquí en tiempo real."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 max-w-[480px] mx-auto z-50">
-          <button
-            onClick={handleSchedule}
-            className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] text-center disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!title || !message}
-          >
-            Programar Alerta
-          </button>
+    <div className="max-w-4xl mx-auto space-y-6 pb-24">
+      <header className="flex items-center gap-4 mb-6">
+        <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-primary transition-colors hover:bg-gray-50">
+          <span className="material-symbols-outlined">arrow_back</span>
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Alertas Programadas</h1>
+          <p className="text-sm text-gray-500">Gestión de envíos futuros y recordatorios</p>
         </div>
+      </header>
 
-        <div className="h-20 bg-transparent"></div>
+      {/* Lista de Alertas Programadas */}
+      <div className="grid gap-4">
+        {scheduledAlerts.length > 0 ? (
+          scheduledAlerts.map(alert => (
+            <div key={alert.id} className="bg-white dark:bg-[#20121d] p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined">event</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-800 dark:text-white">{alert.title.replace("[Programada] ", "")}</h3>
+                <p className="text-xs text-gray-500 line-clamp-1">{alert.message}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-400 font-medium">
+                    {alert.date}
+                  </span>
+                  <span className="text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded font-bold uppercase">
+                    Activa
+                  </span>
+                </div>
+              </div>
+              <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors">
+                <span className="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+            <span className="material-symbols-outlined text-4xl text-gray-300 mb-2">calendar_clock</span>
+            <p className="text-gray-500 font-medium">No hay alertas programadas</p>
+            <p className="text-xs text-gray-400">Crea una nueva para comenzar</p>
+          </div>
+        )}
       </div>
+
+      {/* Botón Flotante */}
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="fixed bottom-6 right-6 bg-[#851c74] hover:bg-[#6b165d] text-white px-6 py-4 rounded-full shadow-lg shadow-[#851c74]/30 z-20 transition-all active:scale-95 flex items-center gap-2"
+      >
+        <span className="material-symbols-outlined">add</span>
+        <span className="font-bold">Nueva Programación</span>
+      </button>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsModalOpen(false)}></div>
+          <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden relative z-10 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+
+            <div className="bg-[#851c74] p-4 flex justify-between items-center text-white shrink-0">
+              <h3 className="font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined">edit_calendar</span>
+                Programar Envío
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="hover:bg-white/20 rounded-full p-1">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Título del Evento</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="Ej. Visita Presidencial"
+                  className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74] text-gray-900 dark:text-white"
+                  value={formData.title}
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Fecha</label>
+                  <input
+                    required
+                    type="date"
+                    className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74] text-gray-900 dark:text-white"
+                    value={formData.date}
+                    onChange={e => setFormData({ ...formData, date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Hora</label>
+                  <input
+                    required
+                    type="time"
+                    className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74] text-gray-900 dark:text-white"
+                    value={formData.time}
+                    onChange={e => setFormData({ ...formData, time: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Segmento Destino</label>
+                <select
+                  className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74] text-gray-900 dark:text-white"
+                  value={formData.segment}
+                  onChange={e => setFormData({ ...formData, segment: e.target.value })}
+                >
+                  <option value="all">Toda la Red (Nacional)</option>
+                  <option value="coord">Solo Coordinadores</option>
+                  <option value="north">Zona Norte</option>
+                  <option value="south">Zona Sur</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Mensaje</label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Escribe el contenido de la alerta..."
+                  className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74] text-gray-900 dark:text-white resize-none"
+                  value={formData.message}
+                  onChange={e => setFormData({ ...formData, message: e.target.value })}
+                ></textarea>
+              </div>
+
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  className="w-full bg-[#851c74] hover:bg-[#6b165d] text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span>Confirmar Programación</span>
+                  <span className="material-symbols-outlined">send_and_archive</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

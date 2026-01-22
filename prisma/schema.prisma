@@ -7,129 +7,156 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  USER
-  ADMIN
+// --- M3: Territorios y Ramas ---
+
+model Territory {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // province, department, locality
+  parentId  String?
+  parent    Territory? @relation("Hierarchy", fields: [parentId], references: [id])
+  children  Territory[] @relation("Hierarchy")
+  
+  users     User[]
+  tasks     Task[]
+  projectTerritories ProjectTerritory[]
 }
 
-enum TaskStatus {
-  PENDING
-  IN_PROGRESS
-  DONE
+model Branch {
+  id    String @id @default(cuid())
+  name  String @unique // PyME, Deportes, Salud...
+  users User[]
 }
 
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum IncidentStatus {
-  OPEN
-  RESOLVED
-  IN_REVIEW
-}
-
-enum AlertType {
-  WARNING
-  INFO
-  ERROR
-  SYSTEM
-  SECURITY
-  NEWS
-}
-
-enum ProjectStatus {
-  PLANNING
-  IN_PROGRESS
-  ON_HOLD
-  COMPLETED
-}
+// --- M1/M4: Usuarios y Auth ---
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
+  id        String   @id @default(cuid())
   email     String   @unique
-  role      Role     @default(USER)
-  territory String?
-  avatar    String?
+  password  String   // Hash argon2/bcrypt
+  name      String?
+  role      String   // AdminNacional, Referente, etc.
+  status    String   @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING
+  
+  // Scope
+  territoryId String?
+  territory   Territory? @relation(fields: [territoryId], references: [id])
+  branchId    String?
+  branch      Branch?    @relation(fields: [branchId], references: [id])
+
+  // Relaciones
+  assignedTasks Task[]
+  requests      Request[]
+  ledProjects   Project[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  tasks     Task[]
-  incidents Incident[]
-  drafts    Draft[]
-  alerts    Alert[]
 }
+
+// --- M5: Tasks ---
 
 model Task {
-  id            String     @id @default(uuid())
-  title         String
-  description   String?
-  status        TaskStatus @default(PENDING)
-  priority      Priority   @default(MEDIUM)
-  category      String?
-  territory     String?
-  dueDate       DateTime?
-  subtasksDone  Int        @default(0)
-  subtasksTotal Int        @default(0)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
-  assignee   User? @relation(fields: [assigneeId], references: [id])
-  assigneeId String?
-}
-
-model Incident {
-  id          String         @id @default(uuid())
+  id          String   @id @default(cuid())
   title       String
   description String?
-  severity    Priority       @default(LOW)
-  status      IncidentStatus @default(OPEN)
-  location    String?
-  territory   String?
-  images      String[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime   @updatedAt
+  status      String   @default("pending") // pending, in_progress, done
+  priority    String   @default("medium")
+  dueDate     DateTime?
+  
+  territoryId String?
+  territory   Territory? @relation(fields: [territoryId], references: [id])
+  
+  assigneeId  String?
+  assignee    User?      @relation(fields: [assigneeId], references: [id])
 
-  reporter   User? @relation(fields: [reporterId], references: [id])
-  reporterId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
+
+// --- M6: Alerts ---
 
 model Alert {
-  id        String    @id @default(uuid())
+  id        String   @id @default(cuid())
   title     String
-  message   String?
-  type      AlertType @default(INFO)
-  isRead    Boolean   @default(false)
-  createdAt DateTime  @default(now())
-
-  user   User? @relation(fields: [userId], references: [id])
-  userId String?
+  type      String   // info, warning, error, news
+  message   String
+  isRead    Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
 }
+
+// --- M7: Projects ---
 
 model Project {
-  id           String        @id @default(uuid())
-  title        String
-  status       ProjectStatus @default(PLANNING)
-  deadline     DateTime?
-  completedKpis Int           @default(0)
-  totalKpis    Int           @default(0)
-  description  String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id          String   @id @default(cuid())
+  code        String?  @unique
+  title       String
+  status      String   @default("draft")
+  priority    String   @default("medium")
+  type        String?  // Operativo, Institucional...
+  branch      String?  // Rama principal (texto o relation opcional)
+  description String?
+  
+  leaderId    String?
+  leader      User?    @relation(fields: [leaderId], references: [id])
+
+  territories ProjectTerritory[]
+  kpis        ProjectKPI[]
+  milestones  ProjectMilestone[]
+  risks       ProjectRisk[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-model Draft {
-  id           String   @id @default(uuid())
-  title        String
-  type         String
-  progress     Int      @default(0)
-  content      Json?
-  lastModified DateTime @updatedAt
-  createdAt    DateTime @default(now())
+model ProjectTerritory {
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id])
+  territoryId String
+  territory   Territory @relation(fields: [territoryId], references: [id])
 
-  user   User? @relation(fields: [userId], references: [id])
-  userId String?
+  @@id([projectId, territoryId])
+}
+
+model ProjectKPI {
+  id        String @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+  name      String
+  target    Float
+  current   Float @default(0)
+  unit      String   @default("%")
+}
+
+model ProjectMilestone {
+  id        String @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+  name      String
+  status    String   @default("pending")
+  endDate   DateTime?
+}
+
+model ProjectRisk {
+  id          String @id @default(cuid())
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id])
+  description String
+  probability Int
+  impact      Int
+}
+
+// --- M8: Requests ---
+
+model Request {
+  id            String   @id @default(cuid())
+  type          String   // Relevamiento, etc.
+  data          Json
+  status        String   @default("pending")
+  feedback      String?
+  
+  submittedById String
+  submittedBy   User     @relation(fields: [submittedById], references: [id])
+  
+  createdAt     DateTime @default(now())
 }
