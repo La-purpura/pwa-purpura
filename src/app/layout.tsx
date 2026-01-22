@@ -7,8 +7,29 @@ import { ThemeProvider } from "@/components/theme-provider";
 const manrope = Manrope({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "La Purpura - Iniciar Sesion",
-  description: "Gestion Operativa en Territorio",
+  title: "La Púrpura - Gestión Territorial",
+  description: "Sistema de gestión territorial y coordinación política",
+  manifest: "/manifest.json",
+  themeColor: "#851c74",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "La Púrpura",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    siteName: "La Púrpura",
+    title: "La Púrpura - Gestión Territorial",
+    description: "Sistema de gestión territorial y coordinación política",
+  },
+  twitter: {
+    card: "summary",
+    title: "La Púrpura - Gestión Territorial",
+    description: "Sistema de gestión territorial y coordinación política",
+  },
 };
 
 export default function RootLayout({
@@ -34,6 +55,19 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then((reg) => console.log('SW registered:', reg))
+                    .catch((err) => console.log('SW registration failed:', err));
+                });
+              }
+            `,
+          }}
         />
       </head>
       <body className={manrope.className}>
