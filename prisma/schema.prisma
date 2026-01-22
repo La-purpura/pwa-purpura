@@ -20,6 +20,7 @@ model Territory {
   users     User[]
   tasks     Task[]
   projectTerritories ProjectTerritory[]
+  requests  Request[]
 }
 
 model Branch {
@@ -159,7 +160,11 @@ model Request {
   submittedById String
   submittedBy   User     @relation(fields: [submittedById], references: [id])
   
+  territoryId   String?
+  territory     Territory? @relation(fields: [territoryId], references: [id])
+  
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 // --- M2: Auditoría ---

@@ -85,6 +85,37 @@ async function main() {
     });
 
     console.log('✅ Admin actualizado:', admin.email);
+
+    // 4. USUARIO REFERENTE (M8 Test)
+    const referente = await prisma.user.upsert({
+        where: { email: 'referente.mendoza@purpura.app' },
+        update: {
+            territoryId: mendoza.id,
+            branchId: branchMap['Deportes']
+        },
+        create: {
+            email: 'referente.mendoza@purpura.app',
+            name: 'Referente Mendoza',
+            password: hashedPassword,
+            role: 'Referente',
+            status: 'ACTIVE',
+            territoryId: mendoza.id,
+            branchId: branchMap['Deportes']
+        },
+    });
+    console.log('✅ Referente creado:', referente.email);
+
+    // 5. SOLICITUDES INICIALES (M8)
+    await prisma.request.create({
+        data: {
+            type: 'Relevamiento Social',
+            data: JSON.stringify({ familias: 10, observacion: 'Necesidad de insumos básicos en Barrio Centro' }),
+            status: 'pending',
+            submittedById: referente.id,
+            territoryId: mendoza.id
+        }
+    });
+    console.log('✅ Solicitud inicial creada');
 }
 
 main()
