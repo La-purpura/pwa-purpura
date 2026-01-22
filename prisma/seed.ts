@@ -130,6 +130,63 @@ async function main() {
     });
 
     console.log('✅ Comunicados iniciales creados');
+
+    // 7. BIBLIOTECA DE RECURSOS (M10)
+    await prisma.resource.create({
+        data: {
+            title: 'Manual de Operaciones Púrpura',
+            description: 'Guía completa sobre el uso de la plataforma y protocolos territoriales.',
+            url: 'https://docs.google.com/viewer?url=manual_ops.pdf',
+            category: 'Manual',
+            authorId: admin.id
+        }
+    });
+
+    await prisma.resource.create({
+        data: {
+            title: 'Protocolo de Emergencias',
+            description: 'Acciones inmediatas ante alertas críticas en territorio.',
+            url: 'https://purpura.app/resources/emergency_protocol.pdf',
+            category: 'Técnico',
+            authorId: admin.id
+        }
+    });
+
+    console.log('✅ Biblioteca de recursos poblada');
+
+    // 8. INCIDENCIAS GEOREFERENCIADAS (M12)
+    await prisma.incident.create({
+        data: {
+            title: 'Luminaria rota en Av. Libertador',
+            description: 'Poste de luz sin funcionamiento desde hace 3 días, genera inseguridad nocturna.',
+            category: 'Infraestructura',
+            priority: 'HIGH',
+            status: 'PENDING',
+            latitude: -34.6037,
+            longitude: -58.3816,
+            address: 'Av. Libertador 1234, Buenos Aires',
+            reportedById: admin.id,
+            territoryId: nacional.id
+        }
+    });
+
+    await prisma.incident.create({
+        data: {
+            title: 'Falta de señalización en cruce peligroso',
+            description: 'Intersección sin semáforo ni señales, varios accidentes reportados.',
+            category: 'Seguridad',
+            priority: 'CRITICAL',
+            status: 'IN_PROGRESS',
+            latitude: -34.6158,
+            longitude: -58.4333,
+            address: 'Cruce Av. Rivadavia y Av. Nazca',
+            reportedById: admin.id,
+            assignedToId: admin.id,
+            territoryId: nacional.id
+        }
+    });
+
+    console.log('✅ Incidencias de prueba creadas');
 }
 
 main()

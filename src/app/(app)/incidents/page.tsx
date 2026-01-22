@@ -1,180 +1,207 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useEffect } from "react";
+import { useRBAC } from "@/hooks/useRBAC";
 import Link from "next/link";
-import IncidentsBottomNav from "@/components/layout/IncidentsBottomNav";
-import { useAppStore } from "@/lib/store";
+
+interface Incident {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  latitude: number | null;
+  longitude: number | null;
+  address: string | null;
+  createdAt: string;
+  reportedBy: {
+    name: string;
+    email: string;
+  };
+  assignedTo?: {
+    name: string;
+  };
+}
 
 export default function IncidentsPage() {
-  const incidents = useAppStore((state) => state.incidents);
-  const [activeFilter, setActiveFilter] = useState("all");
-  const user = useAppStore((state) => state.user);
+  const { hasPermission } = useRBAC();
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
-  const [query, setQuery] = useState("");
+  const fetchIncidents = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter) params.append('status', statusFilter);
+      if (categoryFilter) params.append('category', categoryFilter);
 
-  const filteredIncidents = useMemo(() => {
-    let result = incidents;
-
-    // 1. Text Search
-    if (query.trim()) {
-      const needle = query.toLowerCase();
-      result = result.filter((incident) =>
-        incident.id.toLowerCase().includes(needle) ||
-        incident.title.toLowerCase().includes(needle) ||
-        incident.territory.toLowerCase().includes(needle) ||
-        incident.description.toLowerCase().includes(needle)
-      );
+      const res = await fetch(`/api/incidents?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setIncidents(data);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-
-    // 2. Chip Filter using extended logic
-    if (activeFilter === "open") {
-      result = result.filter(i => i.status === "open" || i.status === "in_review");
-    } else if (activeFilter === "assigned") {
-      result = result.filter(i => i.territory === user?.territory);
-    } else if (activeFilter === "closed") {
-      result = result.filter(i => i.status === "resolved");
-    }
-
-    return result;
-  }, [incidents, query, activeFilter, user]);
-
-  const openCount = incidents.filter((incident) => incident.status === "open").length;
-
-  const formatTime = (value: string) => {
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "Hace minutos";
-    const diff = Date.now() - parsed.getTime();
-    const minutes = Math.max(1, Math.round(diff / 60000));
-    if (minutes < 60) return `Hace ${minutes} min`;
-    const hours = Math.round(minutes / 60);
-    if (hours < 24) return `Hace ${hours} h`;
-    const days = Math.round(hours / 24);
-    return `Hace ${days} d`;
   };
 
-  const priorityMeta = (priority: string) => {
-    if (priority === "critical" || priority === "high") {
-      return {
-        bar: "bg-accent-red",
-        badge: "text-accent-red bg-red-50 dark:bg-red-900/20",
-        label: "High Priority",
-      };
+  useEffect(() => {
+    fetchIncidents();
+  }, [statusFilter, categoryFilter]);
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'CRITICAL': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      case 'HIGH': return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+      case 'MEDIUM': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'LOW': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     }
-    if (priority === "medium") {
-      return {
-        bar: "bg-accent-yellow",
-        badge: "text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20",
-        label: "Medium Priority",
-      };
-    }
-    return {
-      bar: "bg-accent-green",
-      badge: "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20",
-      label: "Low Priority",
-    };
   };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PENDING': return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+      case 'IN_PROGRESS': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'RESOLVED': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case 'CLOSED': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  if (!hasPermission("incidents:view")) {
+    return <div className="p-8 text-center text-red-500 font-bold">Acceso Denegado</div>;
+  }
 
   return (
-    <main className="flex-1 px-4 py-4 space-y-4 pb-24 overflow-y-auto">
-      <div className="flex space-x-2 overflow-x-auto hide-scrollbar pb-2 mb-2">
-        <button
-          onClick={() => setActiveFilter("all")}
-          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition-transform active:scale-95 ${activeFilter === 'all' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700'}`}
-        >
-          Todos
-        </button>
-        <button
-          onClick={() => setActiveFilter("open")}
-          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition-transform active:scale-95 ${activeFilter === 'open' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700'}`}
-        >
-          Abiertos ({openCount})
-        </button>
-        <button
-          onClick={() => setActiveFilter("assigned")}
-          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors active:scale-95 ${activeFilter === 'assigned' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700'}`}
-        >
-          Mi Territorio
-        </button>
-        <button
-          onClick={() => setActiveFilter("closed")}
-          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors active:scale-95 ${activeFilter === 'closed' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700'}`}
-        >
-          Cerrados
-        </button>
-      </div>
-
-      <div className="relative mb-3">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 dark:text-gray-500">
-          <span className="material-icons-round">search</span>
-        </span>
-        <input
-          className="w-full py-2.5 pl-10 pr-4 bg-white dark:bg-gray-800 border-none rounded-xl text-sm shadow-soft focus:ring-2 focus:ring-primary dark:focus:ring-purple-500 transition-shadow text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-          placeholder="Buscar ID, territorio..."
-          type="text"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </div>
-
-      <div className="flex items-center p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 rounded-lg text-sm text-yellow-800 dark:text-yellow-200 mb-4">
-        <span className="material-icons-round mr-2 text-yellow-600 dark:text-yellow-400">
-          wifi_off
-        </span>
-        <span>Estás offline. Los cambios se sincronizarán al conectar.</span>
-      </div>
-
-      {filteredIncidents.map((incident) => {
-        const meta = priorityMeta(incident.priority);
-        return (
-          <div
-            key={incident.id}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 active:scale-[0.99] transition-transform cursor-pointer relative overflow-hidden group block"
+    <div className="max-w-7xl mx-auto p-4 space-y-8 pb-24">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black">Incidencias en Territorio</h1>
+          <p className="text-gray-500">Reportes georeferenciados de problemas y necesidades.</p>
+        </div>
+        {hasPermission("incidents:create") && (
+          <Link
+            href="/incidents/new"
+            className="bg-black dark:bg-white dark:text-black text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-xl flex items-center gap-2 active:scale-95 transition-all"
           >
-            <div className={`absolute top-0 left-0 w-1.5 h-full ${meta.bar}`}></div>
-            <div className="flex justify-between items-start mb-2 pl-2">
-              <div>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide ${meta.badge}`}>
-                  {meta.label}
-                </span>
-                <h3 className="font-bold text-lg mt-1 text-gray-900 dark:text-white">
-                  {incident.id}
-                </h3>
-              </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-700/50 px-2 py-1 rounded">
-                {formatTime(incident.createdAt)}
-              </span>
-            </div>
-            <div className="pl-2 mb-3 flex items-center text-sm text-gray-600 dark:text-gray-300">
-              <span className="material-icons-round text-base mr-1.5 text-gray-400">
-                place
-              </span>
-              <span className="font-bold text-xs">Territorio: {incident.territory}</span>
-            </div>
-            <p className="pl-2 text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-              {incident.description}
-            </p>
-            <div className="pl-2 mt-4 flex items-center justify-between">
-              <div className="flex -space-x-2">
-                <div className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-800 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] text-gray-500 font-bold">
-                  {incident.status === "open" ? "OP" : incident.status === "in_review" ? "RE" : "CL"}
-                </div>
-              </div>
-              <Link href={`/incidents/${incident.id}`} className="text-primary dark:text-purple-400 text-xs font-bold flex items-center group-hover:translate-x-1 transition-transform">
-                Ver Detalles <span className="material-icons-round text-base ml-1">chevron_right</span>
-              </Link>
+            <span className="material-symbols-outlined text-sm">add_circle</span>
+            Nueva Incidencia
+          </Link>
+        )}
+      </header>
+
+      {/* Filtros */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="md:col-span-2 bg-white dark:bg-[#20121d] p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
+          <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Estado</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-transparent border-none outline-none font-bold text-sm"
+          >
+            <option value="">Todos los estados</option>
+            <option value="PENDING">Pendiente</option>
+            <option value="IN_PROGRESS">En Progreso</option>
+            <option value="RESOLVED">Resuelto</option>
+            <option value="CLOSED">Cerrado</option>
+          </select>
+        </div>
+
+        <div className="md:col-span-2 bg-white dark:bg-[#20121d] p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
+          <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Categoría</label>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full bg-transparent border-none outline-none font-bold text-sm"
+          >
+            <option value="">Todas las categorías</option>
+            <option value="Infraestructura">Infraestructura</option>
+            <option value="Seguridad">Seguridad</option>
+            <option value="Salud">Salud</option>
+            <option value="Social">Social</option>
+            <option value="Ambiental">Ambiental</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Lista de Incidencias */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          <div className="col-span-full py-20 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-4 border-[#851c74]/20 border-t-[#851c74] rounded-full animate-spin"></div>
+              <p className="text-xs font-bold text-gray-400 uppercase">Cargando incidencias...</p>
             </div>
           </div>
-        );
-      })}
+        ) : incidents.length === 0 ? (
+          <div className="col-span-full py-20 text-center text-gray-400">
+            No se encontraron incidencias con los filtros seleccionados.
+          </div>
+        ) : (
+          incidents.map((incident) => (
+            <Link
+              key={incident.id}
+              href={`/incidents/${incident.id}`}
+              className="group bg-white dark:bg-[#20121d] rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden hover:shadow-2xl hover:scale-[1.02] transition-all"
+            >
+              <div className="p-6 space-y-4">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getPriorityColor(incident.priority)}`}>
+                        {incident.priority}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getStatusColor(incident.status)}`}>
+                        {incident.status}
+                      </span>
+                    </div>
+                    <h3 className="font-black text-lg leading-tight line-clamp-2 group-hover:text-[#851c74] transition-colors">
+                      {incident.title}
+                    </h3>
+                  </div>
+                  <span className="material-symbols-outlined text-gray-300 group-hover:text-[#851c74] transition-colors">
+                    chevron_right
+                  </span>
+                </div>
 
-      <div className="fixed bottom-24 right-4 z-40">
-        <Link
-          href="/incidents/new"
-          className="bg-primary text-white size-14 rounded-full shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-        >
-          <span className="material-icons-round text-2xl">add</span>
-        </Link>
+                {/* Category */}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="material-symbols-outlined text-gray-400 text-base">category</span>
+                  <span className="font-bold text-gray-600 dark:text-gray-400">{incident.category}</span>
+                </div>
+
+                {/* Location */}
+                {incident.latitude && incident.longitude && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="material-symbols-outlined text-sm">location_on</span>
+                    <span className="font-mono">{incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)}</span>
+                  </div>
+                )}
+
+                {/* Reporter */}
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-[10px] font-bold text-[#851c74]">
+                      {incident.reportedBy.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{incident.reportedBy.name}</span>
+                  </div>
+                  <span className="text-[10px] text-gray-400">
+                    {new Date(incident.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))
+        )}
       </div>
-    </main>
+    </div>
   );
 }

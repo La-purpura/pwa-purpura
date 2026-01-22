@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 
+export const dynamic = 'force-dynamic';
+
 // GET: Unified feed with territorial/branch segmentation
 export async function GET(request: Request) {
     try {

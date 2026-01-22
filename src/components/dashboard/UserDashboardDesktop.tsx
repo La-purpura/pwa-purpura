@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
+import { CriticalIncidents } from "@/components/dashboard/CriticalIncidents";
 
 export default function UserDashboardDesktop() {
     return (
@@ -82,14 +83,16 @@ export default function UserDashboardDesktop() {
                 <section className="space-y-6">
                     <AnnouncementFeed />
 
+                    <CriticalIncidents />
+
                     <div className="bg-[#851c74]/5 rounded-2xl p-6 border border-[#851c74]/10">
                         <h3 className="font-bold text-[#851c74] mb-2">Materiales Útiles</h3>
                         <p className="text-xs text-gray-600 mb-4">Accede a guías y formularios rápidos.</p>
                         <div className="space-y-2">
-                            <button className="w-full bg-white text-[#851c74] py-2 rounded-lg text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2">
-                                <span className="material-symbols-outlined text-sm">download</span>
-                                Descargar Planilla
-                            </button>
+                            <Link href="/library" className="w-full bg-white text-[#851c74] py-2 rounded-lg text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2">
+                                <span className="material-symbols-outlined text-sm">auto_stories</span>
+                                Ver Biblioteca
+                            </Link>
                             <button className="w-full bg-[#851c74] text-white py-2 rounded-lg text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2">
                                 <span className="material-symbols-outlined text-sm">add</span>
                                 Nuevo Reporte

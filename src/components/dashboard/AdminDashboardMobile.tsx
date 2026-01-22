@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
+import { CriticalIncidents } from "@/components/dashboard/CriticalIncidents";
 
 export default function AdminDashboardMobile() {
     return (
@@ -49,6 +50,9 @@ export default function AdminDashboardMobile() {
 
             {/* Comunicados */}
             <AnnouncementFeed />
+
+            {/* Incidencias Críticas */}
+            <CriticalIncidents />
 
             {/* Lista de Actividad Reciente (Estilo Feed) */}
             <section>

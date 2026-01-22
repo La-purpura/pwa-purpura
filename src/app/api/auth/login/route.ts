@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createSessionCookie } from "@/lib/auth";
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
     try {
@@ -16,11 +14,10 @@ export async function POST(request: Request) {
         // Buscar usuario
         const user = await prisma.user.findUnique({
             where: { email },
-            include: { territory: true, branch: true } // Incluir relaciones si sirven
+            include: { territory: true, branch: true }
         });
 
         if (!user) {
-            // Simular tiempo para evitar timing attacks
             await bcrypt.compare("fake", "$2a$10$fakehashfakehashfakehashfakehashfakehash");
             return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
         }
@@ -29,6 +26,7 @@ export async function POST(request: Request) {
         const isValid = await bcrypt.compare(password, user.password);
 
         if (!isValid) {
+            // Log failed login attempt? Maybe later to avoid spam, but critical for security
             return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
         }
 
@@ -46,24 +44,29 @@ export async function POST(request: Request) {
             branchId: user.branchId || undefined
         });
 
-        // Retornar Snapshot seguro (sin password)
+        // AUDIT LOG: Login Success
+        await prisma.auditLog.create({
+            data: {
+                action: 'LOGIN_SUCCESS',
+                entity: 'User',
+                entityId: user.id,
+                actorId: user.id,
+                metadata: JSON.stringify({ email: user.email, role: user.role })
+            }
+        });
+
         return NextResponse.json({
             user: {
                 id: user.id,
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                territory: user.territory?.name || "Nacional",
-
-                // Permisos calculados segun rol (importar desde permissions.ts idealmente)
-                // Por ahora enviamos vacio o calculado en FE
+                territory: user.territory?.name || "Global",
             }
         });
 
     } catch (error) {
         console.error("Login error:", error);
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
-    } finally {
-        await prisma.$disconnect();
     }
 }

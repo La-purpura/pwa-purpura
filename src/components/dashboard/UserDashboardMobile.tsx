@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
+import { CriticalIncidents } from "@/components/dashboard/CriticalIncidents";
 
 export default function UserDashboardMobile() {
     const user = useAppStore(state => state.user);
@@ -13,8 +14,9 @@ export default function UserDashboardMobile() {
             <section>
                 <h2 className="text-2xl font-bold">Hola, {user?.name?.split(' ')[0] || "Compañero"}</h2>
                 <p className="text-gray-500 text-sm">Tienes <span className="text-[#851c74] font-bold">3 tareas</span> pendientes hoy.</p>
-                <div className="mt-4">
+                <div className="mt-4 space-y-4">
                     <AnnouncementFeed />
+                    <CriticalIncidents />
                 </div>
             </section>
 

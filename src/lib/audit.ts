@@ -1,12 +1,12 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient(); // En producción usar singleton global
+import prisma from "./prisma";
 
 export type AuditAction =
     | "TASK_CREATED" | "TASK_UPDATED" | "TASK_COMPLETED"
     | "ALERT_CREATED"
     | "PROJECT_CREATED" | "PROJECT_APPROVED"
-    | "LOGIN_SUCCESS" | "USER_CREATED";
+    | "LOGIN_SUCCESS" | "USER_CREATED"
+    | "POST_PUBLISHED" | "POST_READ"
+    | "RESOURCE_UPLOADED" | "RESOURCE_DELETED";
 
 export async function logAudit(
     action: AuditAction,
@@ -15,7 +15,7 @@ export async function logAudit(
     actorId: string,
     metadata?: Record<string, any>
 ) {
-    // Fire and forget (no await blocking essential flow)
+    // Fire and forget (optional: await if critical)
     prisma.auditLog.create({
         data: {
             action,

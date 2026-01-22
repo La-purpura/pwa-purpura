@@ -26,7 +26,10 @@ export type Permission =
     | "audit:view" | "audit:export"
 
     // Intranet (Posts)
-    | "posts:view" | "posts:create" | "posts:manage";
+    | "posts:view" | "posts:create" | "posts:manage"
+
+    // Biblioteca (Resources)
+    | "resources:view" | "resources:manage";
 
 export type Role =
     | "SuperAdminNacional"
@@ -49,47 +52,55 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         "content:view", "content:publish", "content:archive", "documents:upload", "documents:version",
         "chat:use", "chat:create_channel", "chat:moderate",
         "audit:view", "audit:export",
-        "posts:view", "posts:create", "posts:manage"
+        "posts:view", "posts:create", "posts:manage",
+        "resources:view", "resources:manage"
     ],
     AdminNacional: [
         "users:view", "users:invite", "users:edit", "users:revoke", "roles:assign", "territory:view", "territory:manage",
         "forms:view", "forms:review", "forms:request_changes", "forms:approve", "forms:reject",
         "incidents:view", "incidents:manage", "projects:view", "projects:manage",
         "content:view", "content:publish", "documents:upload", "chat:use", "chat:create_channel", "audit:view",
-        "posts:view", "posts:create", "posts:manage"
+        "posts:view", "posts:create", "posts:manage",
+        "resources:view", "resources:manage"
     ],
     AdminProvincial: [
         "users:view", "users:invite", "users:edit", "users:revoke", "roles:assign", "territory:view",
         "forms:view", "forms:review", "forms:request_changes", "forms:approve", "forms:reject",
         "incidents:view", "incidents:manage", "projects:view", "projects:manage",
         "content:view", "content:publish", "documents:upload", "chat:use", "chat:create_channel", "audit:view",
-        "posts:view", "posts:create"
+        "posts:view", "posts:create",
+        "resources:view", "resources:manage"
     ],
     Coordinador: [
         "users:view", "territory:view", "forms:view", "forms:review", "forms:request_changes",
         "incidents:view", "incidents:create", "incidents:manage", "projects:view", "projects:create", "projects:manage",
         "content:view", "content:publish", "chat:use", "chat:create_channel", "audit:view",
-        "posts:view"
+        "posts:view",
+        "resources:view"
     ],
     Colaborador: [
         "forms:view", "forms:edit_own", "forms:submit",
         "incidents:view", "incidents:create", "incidents:manage", "projects:view", "projects:create",
         "content:view", "documents:upload", "chat:use",
-        "posts:view"
+        "posts:view",
+        "resources:view"
     ],
     Referente: [
         "forms:create", "forms:edit_own", "forms:submit",
         "incidents:create", "incidents:manage", "projects:create", "projects:manage",
         "documents:upload", "content:view", "chat:use",
-        "posts:view"
+        "posts:view",
+        "resources:view"
     ],
     Militante: [
         "content:view", "chat:use",
-        "posts:view"
+        "posts:view",
+        "resources:view"
     ],
     AuditorLectura: [
         "users:view", "territory:view", "forms:view", "incidents:view", "projects:view", "content:view", "audit:view",
-        "posts:view"
+        "posts:view",
+        "resources:view"
     ]
 };
 

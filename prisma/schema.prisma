@@ -22,6 +22,8 @@ model Territory {
   projectTerritories ProjectTerritory[]
   requests  Request[]
   posts     Post[]
+  resources Resource[]
+  incidents Incident[]
 }
 
 model Branch {
@@ -29,6 +31,7 @@ model Branch {
   name  String @unique // PyME, Deportes, Salud...
   users User[]
   posts Post[]
+  resources Resource[]
 }
 
 // --- M1/M4: Usuarios y Auth ---
@@ -54,6 +57,9 @@ model User {
   auditLogs     AuditLog[] // Relation to audit log
   authoredPosts Post[]     @relation("AuthoredPosts")
   readPosts     PostRead[]
+  authoredResources Resource[] @relation("AuthoredResources")
+  reportedIncidents Incident[] @relation("ReportedIncidents")
+  assignedIncidents Incident[] @relation("AssignedIncidents")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -206,6 +212,61 @@ model PostRead {
   readAt DateTime @default(now())
 
   @@id([postId, userId])
+}
+
+// --- M10: Resource Library (Documentation) ---
+
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  url         String   // External link or storage ID
+  category    String   // Political, Technical, Manual, etc.
+  
+  // Segmentation
+  branchId    String?
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  territoryId String?
+  territory   Territory? @relation(fields: [territoryId], references: [id])
+  
+  authorId    String
+  author      User     @relation("AuthoredResources", fields: [authorId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// --- M12: Sistema de Incidencias Georeferenciadas ---
+
+model Incident {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String   // Infraestructura, Seguridad, Social, Salud, etc.
+  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  status      String   @default("PENDING") // PENDING, IN_PROGRESS, RESOLVED, CLOSED
+  
+  // Geolocalización
+  latitude    Float?
+  longitude   Float?
+  address     String?
+  
+  // Evidencia
+  photoUrl    String?  // URL externa o base64
+  
+  // Asignación y seguimiento
+  reportedById String
+  reportedBy   User    @relation("ReportedIncidents", fields: [reportedById], references: [id])
+  
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedIncidents", fields: [assignedToId], references: [id])
+  
+  territoryId  String?
+  territory    Territory? @relation(fields: [territoryId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  resolvedAt  DateTime?
 }
 
 // --- M2: Auditoría ---
