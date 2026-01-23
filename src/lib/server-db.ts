@@ -1,4 +1,8 @@
 // src/lib/server-db.ts
+/**
+ * @deprecated ELIMINAR EN PR-00. Usar Prisma (@/lib/prisma) para persistencia real.
+ * Este archivo solo se mantiene temporalmente para evitar errores de compilación durante la refactorización.
+ */
 
 // Tipos compartidos
 export interface DbTask {

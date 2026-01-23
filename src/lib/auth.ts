@@ -1,6 +1,8 @@
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import prisma from "./prisma";
+import crypto from "crypto";
 
 const SECRET_KEY = process.env.NEXTAUTH_SECRET || "fallback_secret_key_12345";
 const key = new TextEncoder().encode(SECRET_KEY);
@@ -9,6 +11,7 @@ export type SessionPayload = {
     sub: string; // User ID
     email: string;
     role: string;
+    sid: string;  // Session ID in DB
     territoryId?: string;
     branchId?: string;
     iat?: number;
@@ -31,7 +34,19 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
         const { payload } = await jwtVerify(token, key, {
             algorithms: ["HS256"],
         });
-        return payload as SessionPayload;
+
+        const sessionPayload = payload as unknown as SessionPayload;
+
+        // Verificar en DB
+        const dbSession = await prisma.session.findUnique({
+            where: { id: sessionPayload.sid }
+        });
+
+        if (!dbSession || dbSession.revokedAt || dbSession.expiresAt < new Date()) {
+            return null;
+        }
+
+        return sessionPayload;
     } catch (error) {
         return null; // Invalid token
     }
@@ -43,13 +58,24 @@ export async function getSession() {
     return await verifySession(sessionCookie);
 }
 
-export async function createSessionCookie(payload: SessionPayload) {
-    const token = await signSession(payload);
-    // Configurar cookie
-    const expires = new Date(Date.now() + SESSION_DURATION);
+export async function createSessionCookie(payload: Omit<SessionPayload, "sid">) {
+    // Generar registro de sesión en DB
+    const expiresAt = new Date(Date.now() + SESSION_DURATION);
+    const tokenHash = crypto.randomBytes(32).toString('hex'); // Hash único para identificación opcional
 
+    const dbSession = await prisma.session.create({
+        data: {
+            userId: payload.sub,
+            expiresAt,
+            tokenHash
+        }
+    });
+
+    const token = await signSession({ ...payload, sid: dbSession.id });
+
+    // Configurar cookie
     cookies().set("session", token, {
-        expires,
+        expires: expiresAt,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -58,6 +84,16 @@ export async function createSessionCookie(payload: SessionPayload) {
 }
 
 export async function logout() {
+    const sessionCookie = cookies().get("session")?.value;
+    if (sessionCookie) {
+        const payload = await verifySession(sessionCookie);
+        if (payload?.sid) {
+            await prisma.session.update({
+                where: { id: payload.sid },
+                data: { revokedAt: new Date() }
+            });
+        }
+    }
     cookies().set("session", "", { expires: new Date(0) });
 }
 
@@ -65,16 +101,16 @@ export async function updateSession(request: NextRequest) {
     const sessionCookie = request.cookies.get("session")?.value;
     if (!sessionCookie) return;
 
-    // Refresh simple: extender expiración si es válido
     const payload = await verifySession(sessionCookie);
     if (!payload) return;
 
+    // Renovar solo si no ha revocado
     const expires = new Date(Date.now() + SESSION_DURATION);
     const res = NextResponse.next();
 
     res.cookies.set({
         name: "session",
-        value: await signSession({ ...payload, exp: undefined, iat: undefined }), // Renovar firma
+        value: await signSession({ ...payload, exp: undefined, iat: undefined }),
         httpOnly: true,
         expires,
     });

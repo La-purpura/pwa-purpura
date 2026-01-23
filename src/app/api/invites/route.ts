@@ -47,9 +47,9 @@ export async function POST(request: Request) {
       data: {
         email,
         role,
-        token,
+        tokenHash: token, // Renombrado en schema
         expiresAt,
-        invitedById: session.sub,
+        createdById: session.sub, // Renombrado en schema
       }
     });
 
@@ -58,7 +58,6 @@ export async function POST(request: Request) {
     const host = request.headers.get("host") || "localhost:3000";
     const link = `${protocol}://${host}/auth/activate?token=${token}&name=${encodeURIComponent(name || "")}&email=${encodeURIComponent(email)}`;
 
-    // Simular envío de email
     await sendInvitationEmail({
       to: email,
       name: name || email,
@@ -76,6 +75,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || "Error interno" }, { status: 500 });
   }
 }
+
 export async function DELETE(request: Request) {
   try {
     const session = await getSession();

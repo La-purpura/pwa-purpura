@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
-
-const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
     try {
@@ -19,7 +17,6 @@ export async function GET(request: Request) {
             orderBy: { createdAt: 'desc' }
         });
 
-        // Adaptador para el frontend (Flattening si es necesario, o pasar directo)
         return NextResponse.json(projects);
     } catch (error) {
         return handleApiError(error);
@@ -31,7 +28,6 @@ export async function POST(request: Request) {
         const session = await requirePermission('projects:create');
         const body = await request.json();
 
-        // Validaciones
         if (!body.title) return NextResponse.json({ error: 'Título requerido' }, { status: 400 });
 
         const newProject = await prisma.project.create({
@@ -43,10 +39,8 @@ export async function POST(request: Request) {
                 priority: body.priority || 'medium',
                 status: 'draft',
                 description: body.description,
+                leaderId: session.sub,
 
-                leaderId: session.sub, // Asignamos al creador como líder
-
-                // Crear dependencias anidadas
                 kpis: {
                     create: (body.kpis || []).map((k: any) => ({
                         name: k.name,
@@ -92,18 +86,15 @@ export async function PUT(request: Request) {
 
         if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
 
-        // En M2 simple, actualizamos campos escalares base
-        // updateMany/nested para kpis es complejo, lo dejamos simple updates por ahora.
         const updated = await prisma.project.update({
             where: { id },
             data: {
                 status: updates.status,
                 priority: updates.priority
-                // Añadir más campos según necesidad
             }
         });
 
-        logAudit("PROJECT_APPROVED", "Project", id, session.sub, { updates }); // Generic audit
+        logAudit("PROJECT_APPROVED", "Project", id, session.sub, { updates });
 
         return NextResponse.json(updated);
     } catch (error) {

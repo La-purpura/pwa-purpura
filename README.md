@@ -23,10 +23,9 @@ La aplicación estará en `http://localhost:3000`
 - **Frontend**: Next.js 14 + React + TailwindCSS
 - **Backend**: Next.js API Routes
 - **Base de Datos**: 
-  - Local: SQLite (desarrollo)
-  - Producción: PostgreSQL (Supabase)
+  - Desarrollo y Producción: PostgreSQL ([Neon](https://neon.tech))
 - **ORM**: Prisma
-- **Auth**: NextAuth.js (JWT)
+- **Auth**: NextAuth.js (JWT) + Sesiones persistentes en DB
 - **Seguridad**: RBAC + ABAC
 
 ---

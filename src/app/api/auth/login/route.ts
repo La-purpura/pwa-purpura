@@ -25,10 +25,13 @@ export async function POST(request: Request) {
         }
 
         // Verificar Contraseña
-        const isValid = await bcrypt.compare(password, user.password);
+        if (!user.passwordHash) {
+            return NextResponse.json({ error: "Cuenta mal configurada" }, { status: 500 });
+        }
+
+        const isValid = await bcrypt.compare(password, user.passwordHash);
 
         if (!isValid) {
-            // Log failed login attempt? Maybe later to avoid spam, but critical for security
             return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
         }
 
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Cuenta suspendida o inactiva" }, { status: 403 });
         }
 
-        // Crear Sesión
+        // Crear Sesión persistente
         await createSessionCookie({
             sub: user.id,
             email: user.email,

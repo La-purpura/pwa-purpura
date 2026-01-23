@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
 
-const prisma = new PrismaClient();
-
 export async function GET(request: Request) {
     try {
-        const session = await requirePermission('forms:view'); // Permiso básico para ver stats
+        const session = await requirePermission('forms:view');
 
-        // Filtros de Scope (si corresponde)
         const whereTasks: any = {};
         const whereUsers: any = {};
 
@@ -23,7 +20,7 @@ export async function GET(request: Request) {
             prisma.task.count({ where: whereTasks }),
             prisma.user.count({ where: whereUsers }),
             prisma.task.count({ where: { ...whereTasks, status: 'pending' } }),
-            prisma.alert.count({ where: { isRead: false } }) // Alertas globales por ahora
+            prisma.alert.count({ where: { isRead: false } })
         ]);
 
         return NextResponse.json({

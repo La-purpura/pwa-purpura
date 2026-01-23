@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
 
-const prisma = new PrismaClient();
-
-// PATCH: Update request data (only if pending)
 export async function PATCH(
     request: Request,
     { params }: { params: { id: string } }
@@ -28,8 +25,7 @@ export async function PATCH(
             return NextResponse.json({ error: "Solo se pueden editar solicitudes pendientes" }, { status: 400 });
         }
 
-        // Permission check for ownership or admin
-        if (existing.submittedById !== session.userId && session.role !== 'SuperAdminNacional') {
+        if (existing.submittedById !== session.sub && session.role !== 'SuperAdminNacional') {
             return NextResponse.json({ error: "No tienes permiso para editar esta solicitud" }, { status: 403 });
         }
 
@@ -38,7 +34,7 @@ export async function PATCH(
             data: {
                 type: body.type,
                 data: typeof body.data === 'string' ? body.data : JSON.stringify(body.data),
-                feedback: body.feedback // If user wants to clear or update their own comments
+                feedback: body.feedback
             }
         });
 

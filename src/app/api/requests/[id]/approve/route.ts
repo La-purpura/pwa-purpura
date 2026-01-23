@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
-
-const prisma = new PrismaClient();
 
 export async function POST(
     request: Request,
@@ -22,13 +20,12 @@ export async function POST(
             data: { status: 'approved' }
         });
 
-        // Auditoría
         await prisma.auditLog.create({
             data: {
                 action: 'REQUEST_APPROVED',
                 entity: 'Request',
                 entityId: id,
-                actorId: session.userId,
+                actorId: session.sub,
                 metadata: JSON.stringify({ oldStatus: existing.status, newStatus: 'approved' })
             }
         });

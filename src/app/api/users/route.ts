@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         name: body.name || "Usuario Nuevo",
         email: body.email,
         role: body.role,
-        password: hashedPassword,
+        passwordHash: hashedPassword,
         status: "ACTIVE",
         territoryId: body.territoryId || null,
         branchId: body.branchId || null

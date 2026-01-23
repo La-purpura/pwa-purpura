@@ -37,33 +37,45 @@ model Branch {
 // --- M1/M4: Usuarios y Auth ---
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String   // Hash argon2/bcrypt
-  name      String?
-  role      String   // AdminNacional, Referente, etc.
-  status    String   @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String    // Argon2/Bcrypt hash
+  name           String?
+  role           String    // AdminNacional, SuperAdmin, etc.
+  branchId       String?
+  branch         Branch?   @relation(fields: [branchId], references: [id])
+  territoryScope Json?     // { provinceId, departmentId, localityId, multiple: [] }
+  status         String    @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING
   
-  // Scope
-  territoryId String?
-  territory   Territory? @relation(fields: [territoryId], references: [id])
-  branchId    String?
-  branch      Branch?    @relation(fields: [branchId], references: [id])
-
   // Relaciones
-  assignedTasks Task[]
-  requests      Request[]
-  ledProjects   Project[]
-  auditLogs     AuditLog[] // Relation to audit log
-  authoredPosts Post[]     @relation("AuthoredPosts")
-  readPosts     PostRead[]
-  authoredResources Resource[] @relation("AuthoredResources")
-  reportedIncidents Incident[] @relation("ReportedIncidents")
-  assignedIncidents Incident[] @relation("AssignedIncidents")
-  invitations       Invitation[]
+  sessions         Session[]
+  invitationsSent  Invitation[] @relation("InvitedBy")
+  assignedTasks    Task[]
+  requests         Request[]
+  ledProjects      Project[]
+  auditLogs        AuditLog[]
+  authoredPosts    Post[]       @relation("AuthoredPosts")
+  readPosts        PostRead[]
+  authoredResources Resource[]  @relation("AuthoredResources")
+  reportedIncidents Incident[]  @relation("ReportedIncidents")
+  assignedIncidents Incident[]  @relation("AssignedIncidents")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Campo Legacy
+  territoryId String?
+  territory   Territory? @relation(fields: [territoryId], references: [id])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
 }
 
 // --- M5: Tasks ---
@@ -284,16 +296,19 @@ model AuditLog {
 }
 
 model Invitation {
-  id          String   @id @default(cuid())
-  email       String
-  role        String
-  token       String   @unique
-  status      String   @default("PENDING") // PENDING, ACCEPTED, EXPIRED
-  expiresAt   DateTime
+  id             String    @id @default(cuid())
+  email          String
+  tokenHash      String    @unique
+  role           String
+  branchId       String?
+  territoryScope Json?
+  expiresAt      DateTime
+  usedAt         DateTime?
+  revokedAt      DateTime?
   
-  invitedById String
-  invitedBy   User     @relation(fields: [invitedById], references: [id])
+  createdById    String
+  invitedBy      User      @relation("InvitedBy", fields: [createdById], references: [id])
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
