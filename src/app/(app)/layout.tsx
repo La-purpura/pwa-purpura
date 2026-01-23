@@ -14,6 +14,9 @@ import { CommandPalette } from "@/components/layout/CommandPalette";
 import { GlobalBanner } from "@/components/layout/GlobalBanner";
 import { BroadcastModal } from "@/components/layout/BroadcastModal";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const user = useAppStore((state) => state.user);
   const router = useRouter();
