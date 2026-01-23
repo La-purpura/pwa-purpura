@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   title: "La Púrpura - Gestión Territorial",
   description: "Sistema de gestión territorial y coordinación política",
   manifest: "/manifest.json",
-  themeColor: "#851c74",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -30,6 +29,10 @@ export const metadata: Metadata = {
     title: "La Púrpura - Gestión Territorial",
     description: "Sistema de gestión territorial y coordinación política",
   },
+};
+
+export const viewport = {
+  themeColor: "#851c74",
 };
 
 export default function RootLayout({
