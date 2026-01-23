@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 
+export const dynamic = 'force-dynamic';
+
 // POST: Register that the current user has read the post
 export async function POST(
     request: Request,

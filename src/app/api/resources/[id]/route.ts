@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 
+export const dynamic = 'force-dynamic';
+
 // PATCH: Update resource
 export async function PATCH(
     request: Request,

@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { requirePermission, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const session = await requirePermission('users:view');

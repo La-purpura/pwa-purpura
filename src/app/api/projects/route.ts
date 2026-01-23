@@ -3,6 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { requirePermission, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = 'force-dynamic';
+
 const prisma = new PrismaClient();
 
 export async function GET(request: Request) {

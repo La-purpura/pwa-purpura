@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { requirePermission, handleApiError } from "@/lib/guard";
 
+export const dynamic = 'force-dynamic';
+
 const prisma = new PrismaClient();
 
 // GET: List requests with ABAC/RBAC filtering

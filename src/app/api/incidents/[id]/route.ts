@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = 'force-dynamic';
+
 // GET: Get incident details
 export async function GET(
     request: Request,
