@@ -60,6 +60,7 @@ model User {
   authoredResources Resource[] @relation("AuthoredResources")
   reportedIncidents Incident[] @relation("ReportedIncidents")
   assignedIncidents Incident[] @relation("AssignedIncidents")
+  invitations       Invitation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -280,4 +281,19 @@ model AuditLog {
   actor     User     @relation(fields: [actorId], references: [id])
   metadata  String?  // JSON con detalles (Old value -> New value)
   createdAt DateTime @default(now())
+}
+
+model Invitation {
+  id          String   @id @default(cuid())
+  email       String
+  role        String
+  token       String   @unique
+  status      String   @default("PENDING") // PENDING, ACCEPTED, EXPIRED
+  expiresAt   DateTime
+  
+  invitedById String
+  invitedBy   User     @relation(fields: [invitedById], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

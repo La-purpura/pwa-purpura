@@ -22,14 +22,32 @@ export default function InviteUserPage() {
         expiresIn: "48h"
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        // Simulación de generación de token
-        const mockToken = `tk_${Math.random().toString(36).substr(2, 9)}`;
-        const link = `${window.location.origin}/auth/activate?token=${mockToken}&name=${encodeURIComponent(formData.name)}&email=${encodeURIComponent(formData.email)}`;
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-        setGeneratedLink(link);
-        setStep(3);
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+
+        try {
+            const res = await fetch('/api/invites', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || "Error al crear invitación");
+
+            setGeneratedLink(data.link);
+            setStep(3);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const copyLink = () => {
@@ -151,8 +169,8 @@ export default function InviteUserPage() {
                                             <button key={level} type="button"
                                                 onClick={() => setFormData({ ...formData, accessLevel: level })}
                                                 className={`flex-1 p-2 rounded-lg text-xs font-bold border transition-colors ${formData.accessLevel === level
-                                                        ? 'bg-[#851c74]/10 border-[#851c74] text-[#851c74]'
-                                                        : 'border-gray-200 dark:border-gray-700 text-gray-500'
+                                                    ? 'bg-[#851c74]/10 border-[#851c74] text-[#851c74]'
+                                                    : 'border-gray-200 dark:border-gray-700 text-gray-500'
                                                     }`}>
                                                 {level}
                                             </button>

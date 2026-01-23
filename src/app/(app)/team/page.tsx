@@ -14,38 +14,33 @@ type User = {
   avatar: string;
 };
 
-type Territory = { id: string; name: string; type: string };
-type Branch = { id: string; name: string };
+type Invitation = {
+  id: string;
+  email: string;
+  role: string;
+  token: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+};
 
 export default function TeamPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"members" | "pending">("members");
   const { hasPermission } = useRBAC();
-
   const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
 
-  // Data for forms
-  const [availableTerritories, setAvailableTerritories] = useState<Territory[]>([]);
-  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
-
-  // Form State
-  const [newUser, setNewUser] = useState({
-    name: "",
-    email: "",
-    role: "Militante",
-    territoryId: "",
-    branchId: ""
-  });
-
-  const fetchUsers = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/users");
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data);
-      }
+      const [uRes, iRes] = await Promise.all([
+        fetch("/api/users"),
+        fetch("/api/invites")
+      ]);
+      if (uRes.ok) setUsers(await uRes.json());
+      if (iRes.ok) setInvitations(await iRes.json());
     } catch (error) {
       console.error(error);
     } finally {
@@ -53,54 +48,37 @@ export default function TeamPage() {
     }
   };
 
-  const fetchFormOptions = async () => {
-    try {
-      const [tRes, bRes] = await Promise.all([
-        fetch("/api/territories"),
-        fetch("/api/branches")
-      ]);
-      if (tRes.ok) setAvailableTerritories(await tRes.json());
-      if (bRes.ok) setAvailableBranches(await bRes.json());
-    } catch (e) { console.error(e); }
-  };
-
   useEffect(() => {
-    fetchUsers();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    if (showCreate) fetchFormOptions();
-  }, [showCreate]);
-
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRevoke = async (id: string) => {
+    if (!confirm("¿Estás seguro de que deseas revocar esta invitación?")) return;
     try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser)
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || "Error al crear usuario");
-        return;
+      const res = await fetch(`/api/invites?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setInvitations(invitations.filter(i => i.id !== id));
+      } else {
+        alert("Error al revocar");
       }
+    } catch (e) { alert("Error de conexión"); }
+  };
 
-      const data = await res.json();
-      alert(`Usuario creado! Password temporal: ${data.tempPassword}`);
-      setShowCreate(false);
-      fetchUsers(); // Refresh list
-      setNewUser({ name: "", email: "", role: "Militante", territoryId: "", branchId: "" });
-    } catch (e) {
-      alert("Error de conexión");
-    }
+  const copyInviteLink = (invite: Invitation) => {
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const link = `${protocol}//${host}/auth/activate?token=${invite.token}&email=${encodeURIComponent(invite.email)}`;
+    navigator.clipboard.writeText(link);
+    alert("Enlace copiado al portapapeles. ¡Ya puedes pegarlo en WhatsApp!");
   };
 
   const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    u.territory.toLowerCase().includes(search.toLowerCase())
+    u.name?.toLowerCase().includes(search.toLowerCase()) ||
+    u.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredInvites = invitations.filter(i =>
+    i.email.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -109,133 +87,131 @@ export default function TeamPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Equipo</h1>
-          <p className="text-sm text-gray-500">Gestión de usuarios y roles</p>
+          <p className="text-sm text-gray-500">Gestión de usuarios e invitaciones</p>
         </div>
 
         {hasPermission('users:invite') && (
-          <button
-            onClick={() => setShowCreate(true)}
+          <a
+            href="/team/invite"
             className="bg-[#851c74] hover:bg-[#6a165c] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-purple-900/20 transition-all flex items-center gap-2"
           >
             <span className="material-symbols-outlined text-lg">person_add</span>
-            Invitar Usuario
-          </button>
+            Crear Nueva Invitación
+          </a>
         )}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-[#20121d] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-        <input
-          className="w-full md:w-96 pl-4 pr-4 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-sm focus:ring-2 focus:ring-[#851c74] outline-none transition-all"
-          placeholder="Buscar por nombre, email o territorio..."
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      {/* Tabs y Búsqueda */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex bg-white dark:bg-[#20121d] p-1 rounded-xl border border-gray-100 dark:border-gray-800 w-full md:w-auto">
+          <button
+            onClick={() => setTab("members")}
+            className={`flex-1 md:px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === "members" ? "bg-[#851c74] text-white shadow-md" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+          >
+            Miembros ({users.length})
+          </button>
+          <button
+            onClick={() => setTab("pending")}
+            className={`flex-1 md:px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === "pending" ? "bg-[#851c74] text-white shadow-md" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+          >
+            Pendientes ({invitations.length})
+          </button>
+        </div>
+
+        <div className="relative w-full md:w-80">
+          <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400">search</span>
+          <input
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-white dark:bg-[#20121d] border border-gray-100 dark:border-gray-800 text-sm focus:ring-2 focus:ring-[#851c74] outline-none transition-all"
+            placeholder="Buscar..."
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* List */}
+      {/* Loader */}
       {loading ? (
-        <div className="text-center py-10">Cargando equipo...</div>
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#851c74]"></div>
+          <p className="text-gray-500 font-medium">Cargando información del equipo...</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredUsers.map((member) => (
-            <div key={member.id} className="bg-white dark:bg-[#20121d] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 group hover:border-[#851c74]/30 transition-all">
-              <div className="flex items-start justify-between mb-4">
-                <div className="relative">
-                  <img
-                    src={member.avatar}
-                    alt={member.name}
-                    className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm"
-                  />
-                  <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#20121d] ${member.status === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-400'
-                    }`}></span>
-                </div>
-                <span className="text-xs font-mono text-gray-400">ID: {member.id.slice(-4)}</span>
-              </div>
+        <>
+          {tab === "members" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredUsers.map((member) => (
+                <div key={member.id} className="bg-white dark:bg-[#20121d] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 group hover:border-[#851c74]/30 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="relative">
+                      <div className="w-14 h-14 rounded-full bg-purple-50 dark:bg-purple-900/10 flex items-center justify-center border-2 border-white dark:border-gray-700 shadow-sm text-[#851c74] font-bold text-xl uppercase">
+                        {member.name?.charAt(0) || member.email?.charAt(0)}
+                      </div>
+                      <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#20121d] ${member.status === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                    </div>
+                    <span className="text-xs font-mono text-gray-400">ID: {member.id.slice(-4)}</span>
+                  </div>
 
-              <h3 className="font-bold text-gray-800 dark:text-white text-lg truncate">{member.name}</h3>
-              <p className="text-gray-500 text-xs mb-1">{member.email}</p>
-              <p className="text-[#851c74] text-xs font-bold uppercase tracking-wide mb-4">{member.role}</p>
+                  <h3 className="font-bold text-gray-800 dark:text-white text-lg truncate">{member.name || "Sin nombre"}</h3>
+                  <p className="text-gray-500 text-xs mb-1 truncate">{member.email}</p>
+                  <p className="text-[#851c74] text-xs font-bold uppercase tracking-wide mb-4">{member.role}</p>
 
-              <div className="space-y-2 mb-6 border-t border-gray-100 dark:border-gray-800 pt-3">
-                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                  <span className="material-symbols-outlined text-gray-400 text-sm">location_on</span>
-                  <span className="truncate">{member.territory}</span>
+                  <div className="space-y-2 mb-2 border-t border-gray-100 dark:border-gray-800 pt-3">
+                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                      <span className="material-symbols-outlined text-gray-400 text-sm">location_on</span>
+                      <span className="truncate">{member.territory || "No asignado"}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                  <span className="material-symbols-outlined text-gray-400 text-sm">category</span>
-                  <span className="truncate">{member.branch}</span>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* Create Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#20121d] rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-            <h2 className="text-xl font-bold mb-4">Invitar Nuevo Miembro</h2>
+          {tab === "pending" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredInvites.length > 0 ? filteredInvites.map((invite) => (
+                <div key={invite.id} className="bg-white dark:bg-[#20121d] rounded-2xl p-5 shadow-sm border border-orange-100 dark:border-orange-900/30 border-l-4 border-l-orange-400 relative group overflow-hidden">
+                  <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <span className="material-symbols-outlined text-4xl">hourglass_empty</span>
+                  </div>
 
-            <form onSubmit={handleCreateUser} className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-gray-500">Nombre Completo</label>
-                <input required className="w-full p-2 rounded-lg bg-gray-50 border border-gray-200"
-                  value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500">Email</label>
-                <input required type="email" className="w-full p-2 rounded-lg bg-gray-50 border border-gray-200"
-                  value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
-              </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-800">
+                      Pendiente
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      Expira: {new Date(invite.expiresAt).toLocaleDateString()}
+                    </span>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-gray-500">Rol</label>
-                  <select required className="w-full p-2 rounded-lg bg-gray-50 border border-gray-200"
-                    value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
-                    <option value="Militante">Militante</option>
-                    <option value="Referente">Referente</option>
-                    <option value="Colaborador">Colaborador</option>
-                    <option value="Coordinador">Coordinador</option>
-                    <option value="AdminProvincial">Admin Provincial</option>
-                    <option value="AdminNacional">Admin Nacional</option>
-                  </select>
+                  <h3 className="font-bold text-gray-800 dark:text-white text-base truncate mb-1">{invite.email}</h3>
+                  <p className="text-[#851c74] text-xs font-bold uppercase tracking-wide mb-6">{invite.role}</p>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => copyInviteLink(invite)}
+                      className="flex-1 bg-green-50 dark:bg-green-900/10 hover:bg-green-100 text-green-600 dark:text-green-400 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">link</span>
+                      WhatsApp
+                    </button>
+                    <button
+                      onClick={() => handleRevoke(invite.id)}
+                      className="bg-red-50 dark:bg-red-900/10 hover:bg-red-100 text-red-600 dark:text-red-400 p-2 rounded-xl transition-colors"
+                      title="Revocar invitación"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-500">Rama</label>
-                  <select className="w-full p-2 rounded-lg bg-gray-50 border border-gray-200"
-                    value={newUser.branchId} onChange={e => setNewUser({ ...newUser, branchId: e.target.value })}>
-                    <option value="">Ninguna</option>
-                    {availableBranches.map(b => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </select>
+              )) : (
+                <div className="col-span-full py-20 text-center bg-gray-50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                  <p className="text-gray-500">No hay invitaciones pendientes.</p>
                 </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-500">Territorio Asignado</label>
-                <select className="w-full p-2 rounded-lg bg-gray-50 border border-gray-200"
-                  value={newUser.territoryId} onChange={e => setNewUser({ ...newUser, territoryId: e.target.value })}>
-                  <option value="">Nacional / Sin territorio específico</option>
-                  {availableTerritories.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.type === 'province' ? 'Provincia: ' : ''}{t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setShowCreate(false)} className="flex-1 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 font-bold text-gray-600">Cancelar</button>
-                <button type="submit" className="flex-1 py-2 rounded-xl bg-[#851c74] hover:bg-[#6a165c] text-white font-bold">Crear Usuario</button>
-              </div>
-            </form>
-          </div>
-        </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -9,7 +9,8 @@ export function BottomNav() {
   const user = useAppStore((state) => state.user);
 
   // Determinar la ruta de "Inicio" según el rol
-  const homePath = user?.role === "admin" ? "/dashboard" : "/home";
+  const isAdminRole = user?.role?.toLowerCase().includes("admin") || user?.role === "SuperAdminNacional";
+  const homePath = isAdminRole ? "/dashboard" : "/home";
 
   const navItems = [
     { icon: "dashboard", label: "Inicio", href: homePath },
