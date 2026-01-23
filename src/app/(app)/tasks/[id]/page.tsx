@@ -3,12 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
-import { DbTask } from "@/lib/server-db";
 
 export default function TaskDetailPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const { user } = useAppStore();
-    const [task, setTask] = useState<DbTask | null>(null);
+    const [task, setTask] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
@@ -29,7 +28,7 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
             try {
                 const res = await fetch('/api/tasks'); // Traemos todas y filtramos en cliente por simplicidad del mock
                 if (res.ok) {
-                    const tasks: DbTask[] = await res.json();
+                    const tasks: any[] = await res.json();
                     // Si el ID es una seed o generado, intentamos encontrarlo
                     // Para demo, si no encuentra, mostramos la primera para que no falle la experiencia
                     const found = tasks.find(t => t.id === params.id) || tasks[0];

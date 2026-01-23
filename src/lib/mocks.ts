@@ -65,7 +65,7 @@ export interface Draft {
   lastModified: string;
 }
 
-// Reutilizamos tipos de server-db.ts o redefinimos para el frontend si no compartimos
+// Definimos tipos específicos para el frontend
 export type ProjectStatus = 'draft' | 'submitted' | 'needs_changes' | 'approved' | 'in_progress' | 'paused' | 'completed' | 'cancelled';
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical';
 

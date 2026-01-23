@@ -7,6 +7,7 @@ import { useState, Suspense } from "react";
 function ActivateForm() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const token = searchParams.get('token');
     const name = searchParams.get('name') || "Usuario";
     const email = searchParams.get('email') || "usuario@lapurpura.com";
 
@@ -25,11 +26,28 @@ function ActivateForm() {
 
         setIsActivating(true);
 
-        // Simulamos delay de red y activación
-        setTimeout(() => {
-            // Aquí iría el POST /api/auth/activate
-            router.push('/auth/welcome?name=' + encodeURIComponent(name));
-        }, 1500);
+        try {
+            const res = await fetch('/api/auth/activate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token,
+                    password
+                })
+            });
+
+            if (res.ok) {
+                router.push('/auth/welcome?name=' + encodeURIComponent(name));
+            } else {
+                const data = await res.json();
+                alert(data.error || "Error al activar la cuenta");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error de conexión");
+        } finally {
+            setIsActivating(false);
+        }
     };
 
     return (

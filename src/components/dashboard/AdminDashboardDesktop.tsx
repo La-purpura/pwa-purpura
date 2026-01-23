@@ -6,7 +6,6 @@ import { RequestModal } from "@/components/dashboard/RequestModal";
 import { useAppStore } from "@/lib/store";
 import { DashboardAnalytics } from "@/components/dashboard/DashboardAnalytics";
 import { useRBAC } from "@/hooks/useRBAC";
-import { DbRequest } from "@/lib/server-db";
 import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
 
 interface RequestView {
@@ -55,7 +54,7 @@ export default function AdminDashboardDesktop() {
         try {
             const res = await fetch('/api/requests');
             if (res.ok) {
-                const data: DbRequest[] = await res.json();
+                const data: any[] = await res.json();
                 // Adapter
                 const viewData: any[] = data.filter(r => r.status === 'pending').map(r => ({
                     ...r,
