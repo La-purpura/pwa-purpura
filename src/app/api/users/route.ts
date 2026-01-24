@@ -21,6 +21,8 @@ export async function GET(request: Request) {
         email: true,
         role: true,
         status: true,
+        branchId: true,
+        territoryId: true,
         territory: { select: { name: true } },
         branch: { select: { name: true } },
         createdAt: true

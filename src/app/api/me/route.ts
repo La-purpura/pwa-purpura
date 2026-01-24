@@ -20,6 +20,10 @@ export async function GET() {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
+    if (user.status !== 'ACTIVE') {
+      return NextResponse.json({ error: "Cuenta suspendida" }, { status: 403 });
+    }
+
     // Devolvemos el usuario sin el hash de la contraseña
     return NextResponse.json({
       id: user.id,
