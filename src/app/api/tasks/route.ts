@@ -5,62 +5,100 @@ import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/tasks
+ * Lista tareas filtradas por status, asignado, territorio y búsqueda.
+ * Incluye ABAC enforcement.
+ */
 export async function GET(request: Request) {
   try {
     const session = await requirePermission('forms:view');
-    const whereClause = await enforceScope(session);
+    const { searchParams } = new URL(request.url);
+
+    const status = searchParams.get('status');
+    const assigneeId = searchParams.get('assigneeId');
+    const territoryId = searchParams.get('territoryId');
+    const query = searchParams.get('q');
+
+    // 1. Obtener filtro base de alcance (ABAC)
+    const scopeFilter = await enforceScope(session);
+
+    // 2. Construir Where Clause
+    const where: any = {
+      ...scopeFilter
+    };
+
+    if (status) where.status = status;
+    if (assigneeId) where.assigneeId = assigneeId;
+    if (territoryId) where.territoryId = territoryId;
+    if (query) {
+      where.OR = [
+        { title: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } }
+      ];
+    }
 
     const tasks = await prisma.task.findMany({
-      where: whereClause,
+      where,
       include: {
-        assignee: { select: { name: true } },
-        territory: { select: { name: true } }
+        assignee: { select: { id: true, name: true, email: true } },
+        territory: { select: { id: true, name: true } }
       },
       orderBy: { createdAt: 'desc' }
     });
 
+    // 3. Mapeo para frontend
     const mapped = tasks.map(t => ({
       ...t,
-      assignee: t.assignee?.name || "Sin asignar",
-      territory: t.territory?.name || "General",
-      dueDate: t.dueDate?.toISOString() || ""
+      assigneeName: t.assignee?.name || "Sin asignar",
+      territoryName: t.territory?.name || "Nacional",
+      dueDate: t.dueDate?.toISOString() || null
     }));
 
     return NextResponse.json(mapped);
+
   } catch (error) {
     return handleApiError(error);
   }
 }
 
+/**
+ * POST /api/tasks
+ * Crea una nueva tarea.
+ */
 export async function POST(request: Request) {
   try {
     const session = await requirePermission('forms:create');
     const body = await request.json();
 
-    if (!body.title) {
-      return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
+    const { title, description, priority, dueDate, territoryId, assigneeId } = body;
+
+    if (!title) {
+      return NextResponse.json({ error: "El título es obligatorio" }, { status: 400 });
     }
 
-    let targetTerritoryId = body.territoryId;
-
-    if (session.territoryId) {
-      targetTerritoryId = session.territoryId;
+    // Valida que si no es admin, no pueda crear tareas fuera de su territorio
+    let finalTerritoryId = territoryId;
+    if (session.role !== 'SuperAdminNacional' && session.territoryId) {
+      finalTerritoryId = session.territoryId;
     }
 
     const newTask = await prisma.task.create({
       data: {
-        title: body.title,
-        description: body.description,
-        priority: body.priority || "medium",
+        title,
+        description,
+        priority: priority || "medium",
         status: "pending",
-        dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-        territoryId: targetTerritoryId || undefined
+        dueDate: dueDate ? new Date(dueDate) : null,
+        territoryId: finalTerritoryId || null,
+        assigneeId: assigneeId || null
       }
     });
 
-    logAudit("TASK_CREATED", "Task", newTask.id, session.sub, { title: newTask.title });
+    logAudit("TASK_CREATED", "Task", newTask.id, session.sub, { title });
 
     return NextResponse.json(newTask, { status: 201 });
+
   } catch (error) {
     return handleApiError(error);
   }

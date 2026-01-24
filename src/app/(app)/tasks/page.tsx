@@ -4,91 +4,91 @@ import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 
+type Task = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "pending" | "in_progress" | "completed";
+  priority: "low" | "medium" | "high";
+  dueDate: string | null;
+  assigneeName: string;
+  assigneeId: string | null;
+  territoryName: string;
+  territoryId: string | null;
+};
+
 export default function TasksPage() {
   const router = useRouter();
-  const { tasks, setTasks, user } = useAppStore();
-
-  useEffect(() => {
-    fetch('/api/tasks')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setTasks(data);
-      })
-      .catch(console.error);
-  }, [setTasks]);
-
+  const { user } = useAppStore();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
 
-  const filteredTasks = useMemo(() => {
-    let filtered = tasks;
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      let url = '/api/tasks';
+      if (activeFilter === "urgent") url += '?priority=high';
+      if (activeFilter === "assigned") url += `?assigneeId=${user?.id}`;
+      // Territory filter is handled server-side by scope, but we could add explicit filter if needed
 
-    // 1. Filter by Chip
-    if (activeFilter === "urgent") {
-      filtered = filtered.filter(t => t.priority === "high");
-    } else if (activeFilter === "territory") {
-      filtered = filtered.filter(t => t.territory === user?.territory);
-    } else if (activeFilter === "assigned") {
-      // Assuming mock user name matches assignee for demo
-      filtered = filtered.filter(t => t.assignee === user?.name || t.assignee === "Mi");
+      const res = await fetch(url);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setTasks(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return filtered;
-  }, [tasks, activeFilter, user]);
+  useEffect(() => {
+    fetchTasks();
+  }, [activeFilter, user?.id]);
 
   const { highPriority, otherPending, completed } = useMemo(() => {
-    const high = filteredTasks.filter(
-      (task) => task.priority === "high" && task.status !== "done"
-    );
+    return {
+      highPriority: tasks.filter(t => t.priority === "high" && t.status !== "completed"),
+      otherPending: tasks.filter(t => t.status !== "completed" && t.priority !== "high"),
+      completed: tasks.filter(t => t.status === "completed")
+    };
+  }, [tasks]);
 
-    const otherPending = filteredTasks.filter(
-      (task) => task.status !== "done" && task.priority !== "high"
-    );
-
-    const done = filteredTasks.filter((task) => task.status === "done");
-
-    return { highPriority: high, otherPending, completed: done };
-  }, [filteredTasks]);
-
-  const formatDueDate = (value: string) => {
+  const formatDueDate = (value: string | null) => {
+    if (!value) return "Sin fecha";
     const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return parsed.toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "short",
-    });
+    return parsed.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
   };
 
   const statusBadge = (status: string) => {
-    if (status === "in_progress") {
-      return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100";
-    }
-    if (status === "pending") {
-      return "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-100";
-    }
-    return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300";
+    if (status === "in_progress") return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
+    if (status === "pending") return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
+    return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
   };
 
   const statusLabel = (status: string) => {
     if (status === "in_progress") return "En Proceso";
     if (status === "pending") return "Pendiente";
-    return "Finalizado";
+    return "Completada";
   };
 
   return (
-    <main className="pb-24 pt-4 px-4 space-y-6">
+    <main className="pb-24 pt-4 px-4 space-y-6 max-w-4xl mx-auto">
+      {/* Filtros */}
       <div className="flex gap-2 px-1 pb-2 overflow-x-auto no-scrollbar">
         {[
           { id: "all", label: "Todas" },
           { id: "urgent", label: "Urgentes" },
-          { id: "territory", label: "Territorio" },
-          { id: "assigned", label: "Asignadas" }
+          { id: "assigned", label: "Asignadas a mí" }
         ].map((filter) => (
           <button
             key={filter.id}
             onClick={() => setActiveFilter(filter.id)}
             className={`flex h-9 shrink-0 items-center justify-center rounded-full px-5 shadow-sm transition-all ${activeFilter === filter.id
-              ? "bg-primary text-white font-semibold"
-              : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-medium"
+              ? "bg-[#851c74] text-white font-bold"
+              : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-medium"
               }`}
           >
             <p className="text-sm">{filter.label}</p>
@@ -96,145 +96,98 @@ export default function TasksPage() {
         ))}
       </div>
 
-      {highPriority.length > 0 && (
-        <section>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3 px-1">
-            Prioridad Alta
-          </h3>
-          <div className="space-y-4">
-            {highPriority.map((task) => {
-              const percent = task.subtasksTotal
-                ? Math.round((task.subtasksDone / task.subtasksTotal) * 100)
-                : 0;
-              return (
-                <div
-                  key={task.id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] overflow-hidden border border-gray-50 dark:border-gray-700"
-                >
-                  <div className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <span
-                        className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase ${statusBadge(
-                          task.status
-                        )}`}
-                      >
-                        {statusLabel(task.status)}
-                      </span>
-                      <span className="text-xs text-gray-400 font-medium">
-                        Vence: {formatDueDate(task.dueDate)}
-                      </span>
-                    </div>
-                    <h4 className="text-lg font-bold leading-snug mb-3">{task.title}</h4>
-                    <div className="grid grid-cols-2 gap-y-2 mb-4">
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <span className="material-symbols-outlined text-sm">domain</span>
-                        <span className="text-sm">{task.category}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <span className="material-symbols-outlined text-sm">location_on</span>
-                        <span className="text-sm">{task.territory}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <span className="material-symbols-outlined text-sm">person</span>
-                        <span className="text-sm">{task.assignee}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-gray-500">Progreso</span>
-                        <span className="text-primary">
-                          {task.subtasksDone}/{task.subtasksTotal} subtareas
-                        </span>
-                      </div>
-                      <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary" style={{ width: `${percent}%` }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {otherPending.length > 0 && (
-        <section>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3 px-1">
-            Pendientes
-          </h3>
-          <div className="space-y-4">
-            {otherPending.map((task) => {
-              const percent = task.subtasksTotal
-                ? Math.round((task.subtasksDone / task.subtasksTotal) * 100)
-                : 0;
-              return (
-                <div
-                  key={task.id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] overflow-hidden border border-gray-50 dark:border-gray-700"
-                >
-                  <div className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <span
-                        className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase ${statusBadge(
-                          task.status
-                        )}`}
-                      >
-                        {statusLabel(task.status)}
-                      </span>
-                      <span className="text-xs text-gray-400 font-medium">
-                        Vence: {formatDueDate(task.dueDate)}
-                      </span>
-                    </div>
-                    <h4 className="text-lg font-bold leading-snug mb-3">{task.title}</h4>
-                    <div className="grid grid-cols-2 gap-y-2 mb-4">
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                        <span className="material-symbols-outlined text-sm">domain</span>
-                        <span className="text-sm">{task.category}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-      <section>
-        <div className="flex items-center justify-between mb-3 px-1">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Hecho</h3>
-          <span className="text-[10px] px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full font-bold">
-            {completed.length}
-          </span>
+      {loading ? (
+        <div className="py-20 text-center text-gray-500">
+          <div className="animate-spin h-8 w-8 border-2 border-[#851c74] border-t-transparent rounded-full mx-auto mb-4"></div>
+          Cargando tareas...
         </div>
-        {completed.map((task) => (
-          <div
-            key={task.id}
-            className="bg-white/60 dark:bg-gray-800/60 rounded-xl p-4 border border-dashed border-gray-300 dark:border-gray-700"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-md font-semibold text-gray-400 dark:text-gray-500 line-through">
-                  {task.title}
-                </h4>
-                <p className="text-xs text-gray-400">
-                  Finalizado por {task.assignee} - {formatDueDate(task.dueDate)}
-                </p>
+      ) : tasks.length === 0 ? (
+        <div className="py-20 text-center bg-gray-50 dark:bg-gray-800/20 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+          <p className="text-gray-500 italic">No se encontraron tareas en esta categoría.</p>
+        </div>
+      ) : (
+        <>
+          {highPriority.length > 0 && (
+            <section>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-red-500 mb-3 px-1">Prioridad Crítica</h3>
+              <div className="space-y-3">
+                {highPriority.map((task) => (
+                  <TaskCard key={task.id} task={task} onClick={() => router.push(`/tasks/${task.id}`)} formatDueDate={formatDueDate} statusBadge={statusBadge} statusLabel={statusLabel} />
+                ))}
               </div>
-              <span className="material-symbols-outlined text-green-500">check_circle</span>
-            </div>
-          </div>
-        ))}
-      </section>
+            </section>
+          )}
 
+          {otherPending.length > 0 && (
+            <section>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3 px-1">Próximas Tareas</h3>
+              <div className="space-y-3">
+                {otherPending.map((task) => (
+                  <TaskCard key={task.id} task={task} onClick={() => router.push(`/tasks/${task.id}`)} formatDueDate={formatDueDate} statusBadge={statusBadge} statusLabel={statusLabel} />
+                ))}
+              </div>
+            </section>
+          )}
 
+          {completed.length > 0 && (
+            <section>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#851c74] mb-3 px-1">Completadas</h3>
+              <div className="space-y-2 opacity-70">
+                {completed.map((task) => (
+                  <div
+                    key={task.id}
+                    className="bg-white/60 dark:bg-gray-800/40 rounded-xl p-4 border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-between"
+                    onClick={() => router.push(`/tasks/${task.id}`)}
+                  >
+                    <div className="flex-1">
+                      <h4 className="text-sm font-bold text-gray-400 dark:text-gray-500 line-through">{task.title}</h4>
+                      <p className="text-[10px] text-gray-400">Finalizada el {formatDueDate(task.dueDate)}</p>
+                    </div>
+                    <span className="material-symbols-outlined text-green-500">check_circle</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
 
       <button
-        className="fixed right-6 bottom-24 size-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-50"
+        className="fixed right-6 bottom-24 size-14 bg-[#851c74] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-50 group"
         onClick={() => router.push("/new-task")}
       >
-        <span className="material-symbols-outlined text-3xl">add</span>
+        <span className="material-symbols-outlined text-3xl group-hover:rotate-90 transition-transform duration-300">add</span>
       </button>
     </main>
+  );
+}
+
+function TaskCard({ task, onClick, formatDueDate, statusBadge, statusLabel }: { task: Task, onClick: () => void, formatDueDate: any, statusBadge: any, statusLabel: any }) {
+  return (
+    <div
+      onClick={onClick}
+      className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 hover:border-[#851c74]/30 transition-all cursor-pointer group active:scale-[0.98]"
+    >
+      <div className="flex justify-between items-start mb-3">
+        <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${statusBadge(task.status)}`}>
+          {statusLabel(task.status)}
+        </span>
+        <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
+          <span className="material-symbols-outlined text-xs">calendar_today</span>
+          {formatDueDate(task.dueDate)}
+        </span>
+      </div>
+      <h4 className="text-base font-bold text-gray-800 dark:text-white leading-snug mb-3 group-hover:text-[#851c74] transition-colors">{task.title}</h4>
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+          <span className="material-symbols-outlined text-sm">location_on</span>
+          <span className="text-[11px] font-semibold">{task.territoryName}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+          <span className="material-symbols-outlined text-sm">person</span>
+          <span className="text-[11px] font-semibold truncate max-w-[100px]">{task.assigneeName}</span>
+        </div>
+      </div>
+    </div>
   );
 }

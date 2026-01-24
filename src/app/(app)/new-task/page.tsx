@@ -3,257 +3,180 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
+import { useRBAC } from "@/hooks/useRBAC";
 
 export default function NewTaskPage() {
   const router = useRouter();
-  const addTask = useAppStore((state) => state.addTask);
-  const addToOfflineQueue = useAppStore((state) => state.addToOfflineQueue);
-  const user = useAppStore((state) => state.user);
+  const { user } = useAppStore();
+  const { hasPermission } = useRBAC();
 
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [territories, setTerritories] = useState<any[]>([]);
+  const [team, setTeam] = useState<any[]>([]);
 
-  // Territory Management
-  const [territory, setTerritory] = useState("");
-  const [territoryId, setTerritoryId] = useState(""); // ID real para backend
-  const [availableTerritories, setAvailableTerritories] = useState<{ id: string, name: string }[]>([]);
-  const [isLoadingTerritories, setIsLoadingTerritories] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    priority: "medium",
+    dueDate: new Date().toISOString().split('T')[0],
+    territoryId: "",
+    assigneeId: ""
+  });
 
-  // Auto-fill territory if user has restricted scope
   useEffect(() => {
-    if (!user) return;
+    // Cargar territorios y equipo para asignación
+    Promise.all([
+      fetch('/api/territories').then(res => res.json()),
+      fetch('/api/users').then(res => res.json())
+    ]).then(([tData, uData]) => {
+      if (Array.isArray(tData)) setTerritories(tData);
+      if (Array.isArray(uData)) setTeam(uData);
 
-    // Si el usuario tiene territorio fijo (no es Admin Nacional global)
-    // Nota: Dependiendo de cómo guardemos 'territory' en el store (nombre vs ID).
-    // Asumiremos que el backend en /api/auth/login devuelve { territory: "La Plata" } como nombre.
-    // Lo ideal es tener territoryId en el user store.
-
-    // Simulación de lógica RBAC simple en Frontend (Backend es quien manda)
-    const isAdminGlobal = user.role === "SuperAdminNacional" || user.role === "AdminNacional";
-
-    if (isAdminGlobal) {
-      setIsLoadingTerritories(true);
-      fetch('/api/territories')
-        .then(res => res.json())
-        .then(data => {
-          setAvailableTerritories(data);
-          setIsLoadingTerritories(false);
-        })
-        .catch(() => setIsLoadingTerritories(false));
-    } else {
-      // Usuario restringido: Pre-llenar y bloquear
-      setTerritory(user.territory || "Mi Territorio");
-      // No tenemos el territoryId aquí si el login no lo devolvió, pero la API lo resolverá por sesión.
-    }
+      // Auto-seleccionar territorio si el usuario tiene uno fijo
+      if (user?.territoryId) {
+        setFormData(prev => ({ ...prev, territoryId: user.territoryId! }));
+      }
+    }).catch(console.error);
   }, [user]);
 
-  const [assignee, setAssignee] = useState(user?.name || "");
-  const [priority, setPriority] = useState("high");
-  const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [subtasksTotal, setSubtasksTotal] = useState("3");
-  const [description, setDescription] = useState("");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!title.trim()) {
-      alert("El título es obligatorio.");
-      return;
-    }
-
-    const taskPayload = {
-      title: title.trim(),
-      priority: priority as "low" | "medium" | "high",
-      dueDate: dueDate || new Date().toISOString(),
-      category: category || "Operativos",
-      territory: territory,      // Nombre (para UI offline)
-      territoryId: territoryId,  // ID (para Backend)
-      assignee: assignee,
-      description: description,
-      subtasksTotal: Number(subtasksTotal) || 1,
-      status: "pending"
-    };
-
-    // 1. Backend Sync (Intento online)
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(taskPayload),
+        body: JSON.stringify(formData),
       });
 
       if (res.ok) {
-        const serverTask = await res.json();
-        // Actualizar store con la tarea confirmada por servidor
-        addTask({
-          ...taskPayload,
-          id: serverTask.id,
-          status: serverTask.status,
-          date: new Date().toISOString(),
-          subtasksDone: 0
-        });
         router.push("/tasks");
-        return;
+        router.refresh();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Error al crear la tarea");
       }
     } catch (e) {
-      console.log("Offline mode detected, queuing task.");
+      alert("Error de conexión");
+    } finally {
+      setLoading(false);
     }
-
-    // 2. Fallback Offline
-    const offlineId = Math.random().toString(36).substr(2, 9);
-    addTask({ ...taskPayload, id: offlineId, subtasksDone: 0, date: new Date().toISOString(), status: 'pending' });
-    addToOfflineQueue({
-      id: offlineId,
-      type: "task",
-      title: title.trim(),
-    });
-
-    router.push("/tasks");
   };
 
   return (
-    <div className="bg-background-light dark:bg-background-dark min-h-screen font-display text-[#171216] dark:text-white pb-24">
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto">
-          <button
-            className="text-primary flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            onClick={() => router.push("/tasks")}
-          >
-            <span className="material-symbols-outlined">arrow_back_ios_new</span>
+    <div className="bg-gray-50 dark:bg-black min-h-screen pb-24">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center p-4 justify-between max-w-2xl mx-auto">
+          <button onClick={() => router.back()} className="text-gray-500 flex size-10 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <h2 className="text-[#171216] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">
-            Nueva Tarea
-          </h2>
+          <h2 className="text-lg font-bold">Nueva Tarea Operativa</h2>
           <div className="w-10" />
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 pt-6 space-y-6">
-        <section>
-          <h3 className="text-[#171216] dark:text-white tracking-tight text-2xl font-extrabold leading-tight">
-            Crear Operativo
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm font-normal mt-2">
-            Registrar nueva acción territorial.
-          </p>
-        </section>
-
+      <main className="max-w-2xl mx-auto px-4 pt-6">
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5 space-y-4">
-            <label className="flex flex-col w-full">
-              <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-1.5 ml-1">Titulo</p>
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Título de la Tarea</label>
               <input
-                className="form-input w-full rounded-lg text-[#171216] dark:text-white focus:ring-2 focus:ring-primary/20 border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary h-12 placeholder:text-gray-400 p-3 text-sm transition-all"
-                placeholder="Ej. Relevamiento Barrio San Juan"
+                required
+                className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-4 text-sm focus:ring-2 ring-[#851c74] transition-all"
+                placeholder="Ej. Relevamiento Barrio San Martín"
                 type="text"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
+                value={formData.title}
+                onChange={e => setFormData({ ...formData, title: e.target.value })}
               />
-            </label>
+            </div>
 
-            {/* Selector de Territorio Inteligente */}
-            <label className="flex flex-col w-full">
-              <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-1.5 ml-1">Territorio</p>
-
-              {availableTerritories.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Territorio</label>
                 <select
-                  className="form-input w-full rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 h-12 p-3 text-sm"
-                  value={territoryId}
-                  onChange={(e) => {
-                    setTerritoryId(e.target.value);
-                    setTerritory(e.target.options[e.target.selectedIndex].text);
-                  }}
+                  required
+                  disabled={!!user?.territoryId && !hasPermission('territory:manage')}
+                  className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-3 text-sm focus:ring-2 ring-[#851c74] disabled:opacity-60"
+                  value={formData.territoryId}
+                  onChange={e => setFormData({ ...formData, territoryId: e.target.value })}
                 >
-                  <option value="">Seleccionar Territorio...</option>
-                  {availableTerritories.map(t => (
+                  <option value="">Seleccionar...</option>
+                  {territories.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
-              ) : (
-                <input
-                  className="form-input w-full rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-gray-500 cursor-not-allowed h-12 p-3 text-sm"
-                  type="text"
-                  value={territory}
-                  readOnly
-                  title="Asignado automáticamente por tu rol"
-                />
-              )}
-            </label>
-
-            <label className="flex flex-col w-full">
-              <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-1.5 ml-1">Categoria</p>
-              <input
-                className="form-input w-full rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 h-12 p-3 text-sm"
-                placeholder="Ej. Urbanizacion"
-                type="text"
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-              />
-            </label>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5 space-y-4">
-            <div className="flex flex-col">
-              <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-3 ml-1">Prioridad</p>
-              <div className="grid grid-cols-3 gap-3">
-                {["high", "medium", "low"].map((level) => (
-                  <label key={level} className="cursor-pointer">
-                    <input
-                      className="hidden peer"
-                      type="radio"
-                      name="priority"
-                      value={level}
-                      checked={priority === level}
-                      onChange={() => setPriority(level)}
-                    />
-                    <div className="text-center py-3 rounded-lg border border-gray-200 dark:border-gray-700 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300 peer-checked:text-primary">
-                        {level === "high" ? "Alta" : level === "medium" ? "Media" : "Baja"}
-                      </p>
-                    </div>
-                  </label>
-                ))}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Asignar a</label>
+                <select
+                  className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-3 text-sm focus:ring-2 ring-[#851c74]"
+                  value={formData.assigneeId}
+                  onChange={e => setFormData({ ...formData, assigneeId: e.target.value })}
+                >
+                  <option value="">Sin asignar (Global)</option>
+                  {team.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col">
-                <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-2 ml-1">Fecha limite</p>
-                <input
-                  className="form-input w-full rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 h-12 p-3 text-sm"
-                  type="date"
-                  value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
-                />
-              </label>
-              <label className="flex flex-col">
-                <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-2 ml-1">Subtareas</p>
-                <input
-                  className="form-input w-full rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 h-12 p-3 text-sm"
-                  type="number"
-                  min={1}
-                  value={subtasksTotal}
-                  onChange={(event) => setSubtasksTotal(event.target.value)}
-                />
-              </label>
-            </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-5">
-            <p className="text-[#171216] dark:text-gray-300 text-sm font-semibold pb-3 ml-1">Descripcion</p>
-            <textarea
-              className="form-input w-full resize-none rounded-lg text-[#171216] dark:text-white border border-[#e4dce3] dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[120px] p-3 text-sm"
-              placeholder="Detalles..."
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            ></textarea>
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Prioridad</label>
+                <select
+                  className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-3 text-sm focus:ring-2 ring-[#851c74]"
+                  value={formData.priority}
+                  onChange={e => setFormData({ ...formData, priority: e.target.value })}
+                >
+                  <option value="low">Baja</option>
+                  <option value="medium">Media</option>
+                  <option value="high">Alta / Urgente</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Fecha Límite</label>
+                <input
+                  className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-4 text-sm focus:ring-2 ring-[#851c74]"
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Descripción / Instrucciones</label>
+              <textarea
+                className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none min-h-[100px] p-4 text-sm focus:ring-2 ring-[#851c74] resize-none"
+                placeholder="Detalla los pasos a seguir o información relevante..."
+                value={formData.description}
+                onChange={e => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
           </div>
 
           <button
-            className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
+            disabled={loading}
+            className="w-full bg-[#851c74] hover:bg-[#6d165f] text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#851c74]/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70"
             type="submit"
           >
-            <span className="material-symbols-outlined">add_task</span>
-            Confirmar Operativo
+            {loading ? (
+              <div className="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full"></div>
+            ) : (
+              <>
+                <span className="material-symbols-outlined">send</span>
+                CREAR TAREA
+              </>
+            )}
           </button>
+
+          <p className="text-center text-[10px] text-gray-400 uppercase font-bold tracking-widest">
+            La tarea será visible inmediatamente para el asignado.
+          </p>
         </form>
       </main>
     </div>
