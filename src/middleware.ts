@@ -30,13 +30,16 @@ export async function middleware(request: NextRequest) {
     if (isAuthRoute && session) {
         try {
             await jwtVerify(session, key);
-            // Si el token es válido, redirigir al home/dashboard
-            // Nota: Aquí no verificamos la DB por performance en el middleware (Edge runtime)
-            // La validación real ocurre en /api/me y en los handlers de API
             return NextResponse.redirect(new URL("/home", request.url));
         } catch (error) {
-            // Token inválido, dejar que siga al login
+            // Token inválido, dejar que siga
         }
+    }
+
+    // Si hay sesión y es una ruta de app, intentar renovar la cookie (sliding window)
+    if (session && isAppRoute) {
+        const { updateSession } = await import("@/lib/auth");
+        return await updateSession(request);
     }
 
     return NextResponse.next();

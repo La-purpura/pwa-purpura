@@ -16,9 +16,9 @@ export interface Announcement {
 
 interface AppState {
   // Auth
-  user: User | null;
-  setUser: (user: User | null) => void;
-  logout: () => void;
+  user: (User & { permissions?: string[] }) | null;
+  setUser: (user: (User & { permissions?: string[] }) | null) => void;
+  logout: () => Promise<void>;
 
   // Collections
   tasks: Task[];

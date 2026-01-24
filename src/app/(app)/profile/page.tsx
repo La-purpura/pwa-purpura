@@ -9,8 +9,8 @@ export default function ProfilePage() {
   const logout = useAppStore((state) => state.logout);
   const router = useRouter();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
   };
 

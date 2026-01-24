@@ -7,7 +7,9 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
     try {
-        const { email, password } = await request.json();
+        const body = await request.json();
+        const email = body.identifier || body.email;
+        const password = body.password;
 
         if (!email || !password) {
             return NextResponse.json({ error: "Faltan credenciales" }, { status: 400 });

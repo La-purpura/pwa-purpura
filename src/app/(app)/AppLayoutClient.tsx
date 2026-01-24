@@ -20,11 +20,16 @@ export default function AppLayoutClient({ children }: { children: React.ReactNod
     useEffect(() => {
         const bootstrapSession = async () => {
             try {
-                const res = await fetch('/api/me');
-                if (res.ok) {
-                    const userData = await res.json();
-                    setUser(userData);
-                } else if (res.status === 401) {
+                const [meRes, accessRes] = await Promise.all([
+                    fetch('/api/me'),
+                    fetch('/api/me/effective-access')
+                ]);
+
+                if (meRes.ok && accessRes.ok) {
+                    const meData = await meRes.json();
+                    const accessData = await accessRes.json();
+                    setUser({ ...meData, ...accessData });
+                } else if (meRes.status === 401 || accessRes.status === 401) {
                     setUser(null);
                     router.push("/");
                 }
@@ -38,13 +43,6 @@ export default function AppLayoutClient({ children }: { children: React.ReactNod
         }
     }, [user, setUser, router]);
 
-    // Redirigir si no hay usuario (caso logout o bootstrap fallido)
-    useEffect(() => {
-        if (!user && pathname !== "/") {
-            // Un pequeño delay para permitir que el bootstrap intente cargar primero
-            // Aunque el spinner ya bloquea el render de los hijos
-        }
-    }, [user, pathname]);
 
     if (!user) {
         return (
