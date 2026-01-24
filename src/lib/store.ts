@@ -74,49 +74,64 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       // Auth
-      user: null, // Initialize as null for auth guards
+      user: null,
       setUser: (user) => set({ user }),
-      logout: () => set({ user: null }),
+      logout: async () => {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+          set({ user: null });
+        } catch (error) {
+          console.error("Logout failed:", error);
+          // Opcionalmente limpiar el estado local de todos modos
+          set({ user: null });
+        }
+      },
 
       // Collections
-      tasks: mockTasks,
+      tasks: [],
       setTasks: (tasks) => set({ tasks }),
       addTask: (task) => set((state) => ({ tasks: [task, ...state.tasks] })),
 
-      incidents: mockIncidents,
+      incidents: [],
       setIncidents: (incidents) => set({ incidents }),
       addIncident: (incident) => set((state) => ({ incidents: [incident, ...state.incidents] })),
 
-      alerts: mockAlerts,
+      alerts: [],
       setAlerts: (alerts) => set({ alerts }),
       addAlert: (alert) => set((state) => ({ alerts: [alert, ...state.alerts] })),
       markAlertAsRead: (id) => set((state) => ({
         alerts: state.alerts.map((a) => a.id === id ? { ...a, isRead: true } : a)
       })),
 
-      news: mockNews,
+      news: [],
       addNews: (news) => set((state) => ({ news: [news, ...state.news] })),
 
-      reports: mockReports,
+      reports: [],
 
-      users: mockUsers,
+      users: [],
       addUser: (user) => set((state) => ({ users: [user, ...state.users] })),
 
-      drafts: mockDrafts,
+      drafts: [],
       addDraft: (draft) => set((state) => ({ drafts: [draft, ...state.drafts] })),
       removeDraft: (id) => set((state) => ({ drafts: state.drafts.filter((d) => d.id !== id) })),
 
-      projects: mockProjects,
+      projects: [],
       setProjects: (projects) => set({ projects }),
 
       // Offline
       offlineQueue: [],
       addToOfflineQueue: (item) => set((state) => ({ offlineQueue: [...state.offlineQueue, item] })),
       removeFromOfflineQueue: (id) => set((state) => ({ offlineQueue: state.offlineQueue.filter((i) => i.id !== id) })),
-      clearOfflineQueue: () => set({ offlineQueue: [] }), // Added missing comma and closing brace earlier so careful here
+      clearOfflineQueue: () => set({ offlineQueue: [] }),
 
       // KPIs
-      kpis: mockKpis,
+      kpis: {
+        activeAlerts: 0,
+        pendingTasks: 0,
+        projects: 0,
+        coverage: 0,
+        incidents: 0,
+      },
       updateKpis: (newKpis) => set((state) => ({ kpis: { ...state.kpis, ...newKpis } })),
 
       // UI State

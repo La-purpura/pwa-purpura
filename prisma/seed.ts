@@ -68,7 +68,7 @@ async function main() {
         create: {
             email: 'admin@purpura.app',
             name: 'Super Admin',
-            password: hashedPassword,
+            passwordHash: hashedPassword,
             role: 'SuperAdminNacional',
             status: 'ACTIVE',
             territoryId: nacional.id,
@@ -88,7 +88,7 @@ async function main() {
         create: {
             email: 'referente.mendoza@purpura.app',
             name: 'Referente Mendoza',
-            password: hashedPassword,
+            passwordHash: hashedPassword,
             role: 'Referente',
             status: 'ACTIVE',
             territoryId: mendoza.id,

@@ -120,9 +120,9 @@ export function Sidebar() {
                 <div className="h-px bg-gray-200 dark:bg-gray-700 w-full my-1"></div>
 
                 <button
-                    onClick={() => {
-                        logout();
-                        router.push("/auth/login");
+                    onClick={async () => {
+                        await logout();
+                        router.push("/");
                     }}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 w-full transition-all group ${isCollapsed ? 'justify-center' : ''}`}
                     title="Cerrar Sesión"

@@ -13,17 +13,46 @@ import { GlobalBanner } from "@/components/layout/GlobalBanner";
 import { BroadcastModal } from "@/components/layout/BroadcastModal";
 
 export default function AppLayoutClient({ children }: { children: React.ReactNode }) {
-    const user = useAppStore((state) => state.user);
+    const { user, setUser } = useAppStore();
     const router = useRouter();
     const pathname = usePathname();
 
     useEffect(() => {
-        if (!user) {
-            router.push("/");
-        }
-    }, [user, router]);
+        const bootstrapSession = async () => {
+            try {
+                const res = await fetch('/api/me');
+                if (res.ok) {
+                    const userData = await res.json();
+                    setUser(userData);
+                } else if (res.status === 401) {
+                    setUser(null);
+                    router.push("/");
+                }
+            } catch (error) {
+                console.error("Session bootstrap failed:", error);
+            }
+        };
 
-    if (!user) return null;
+        if (!user) {
+            bootstrapSession();
+        }
+    }, [user, setUser, router]);
+
+    // Redirigir si no hay usuario (caso logout o bootstrap fallido)
+    useEffect(() => {
+        if (!user && pathname !== "/") {
+            // Un pequeño delay para permitir que el bootstrap intente cargar primero
+            // Aunque el spinner ya bloquea el render de los hijos
+        }
+    }, [user, pathname]);
+
+    if (!user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     // Lógica para determinar el título del Header según la ruta
     const getHeaderInfo = () => {

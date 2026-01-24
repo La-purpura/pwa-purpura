@@ -63,10 +63,16 @@ export async function POST(request: Request) {
         return NextResponse.json({
             user: {
                 id: user.id,
-                name: user.name,
                 email: user.email,
+                name: user.name,
                 role: user.role,
+                status: user.status,
+                branchId: user.branchId,
+                branch: user.branch?.name || "Sin rama",
+                territoryId: user.territoryId,
                 territory: user.territory?.name || "Global",
+                territoryScope: user.territoryScope,
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "User")}&background=random`
             }
         });
 
