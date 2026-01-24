@@ -1,4 +1,4 @@
-import { Role } from "./permissions";
+import { Role } from "./rbac";
 
 export interface User {
   id: string;
@@ -6,6 +6,8 @@ export interface User {
   email: string;
   role: Role;
   territory: string;
+  territoryId?: string;
+  branchId?: string;
   avatar: string;
 }
 

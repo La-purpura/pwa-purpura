@@ -33,8 +33,9 @@ export default function NewTaskPage() {
       if (Array.isArray(uData)) setTeam(uData);
 
       // Auto-seleccionar territorio si el usuario tiene uno fijo
-      if (user?.territoryId) {
-        setFormData(prev => ({ ...prev, territoryId: user.territoryId! }));
+      const u = user as any;
+      if (u?.territoryId) {
+        setFormData(prev => ({ ...prev, territoryId: u.territoryId }));
       }
     }).catch(console.error);
   }, [user]);
@@ -96,7 +97,7 @@ export default function NewTaskPage() {
                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Territorio</label>
                 <select
                   required
-                  disabled={!!user?.territoryId && !hasPermission('territory:manage')}
+                  disabled={!!(user as any)?.territoryId && !hasPermission('territory:manage')}
                   className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-3 text-sm focus:ring-2 ring-[#851c74] disabled:opacity-60"
                   value={formData.territoryId}
                   onChange={e => setFormData({ ...formData, territoryId: e.target.value })}

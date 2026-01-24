@@ -1,18 +1,51 @@
 import { NextResponse } from 'next/server';
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/projects
+ * Lista proyectos con filtros y ABAC enforcement.
+ */
 export async function GET(request: Request) {
     try {
         const session = await requirePermission('projects:view');
+        const { searchParams } = new URL(request.url);
+
+        const status = searchParams.get('status');
+        const territoryId = searchParams.get('territoryId');
+        const query = searchParams.get('q');
+
+        // ABAC: Filtrar por alcance territorial
+        const scopeFilter = await enforceScope(session);
+
+        // Construcción de consulta compatible con ProjectTerritory
+        const where: any = {
+            ...status ? { status } : {},
+            ...territoryId ? {
+                territories: { some: { territoryId } }
+            } : (scopeFilter.territoryId ? {
+                territories: { some: { territoryId: scopeFilter.territoryId } }
+            } : {})
+        };
+
+        if (query) {
+            where.OR = [
+                { title: { contains: query, mode: 'insensitive' } },
+                { description: { contains: query, mode: 'insensitive' } },
+                { code: { contains: query, mode: 'insensitive' } }
+            ];
+        }
 
         const projects = await prisma.project.findMany({
+            where,
             include: {
-                milestones: true,
-                kpis: true
+                leader: { select: { name: true } },
+                territories: { include: { territory: { select: { name: true } } } },
+                kpis: true,
+                milestones: { orderBy: { endDate: 'asc' } }
             },
             orderBy: { createdAt: 'desc' }
         });
@@ -23,80 +56,44 @@ export async function GET(request: Request) {
     }
 }
 
+/**
+ * POST /api/projects
+ * Crea un nuevo proyecto (Borrador inicial).
+ */
 export async function POST(request: Request) {
     try {
         const session = await requirePermission('projects:create');
         const body = await request.json();
 
-        if (!body.title) return NextResponse.json({ error: 'Título requerido' }, { status: 400 });
+        const { title, description, branch, type, priority, territoryIds } = body;
 
-        const newProject = await prisma.project.create({
+        if (!title) return NextResponse.json({ error: 'Título requerido' }, { status: 400 });
+
+        const project = await prisma.project.create({
             data: {
-                code: body.code || `PROJ-${Date.now().toString().slice(-6)}`,
-                title: body.title,
-                branch: body.branch || 'General',
-                type: body.type,
-                priority: body.priority || 'medium',
+                title,
+                description,
+                branch: branch || 'General',
+                type: type || 'Operativo',
+                priority: priority || 'medium',
                 status: 'draft',
-                description: body.description,
                 leaderId: session.sub,
-
-                kpis: {
-                    create: (body.kpis || []).map((k: any) => ({
-                        name: k.name,
-                        target: Number(k.target) || 100,
-                        unit: k.unit || 'unidades'
-                    }))
-                },
-                milestones: {
-                    create: (body.milestones || []).map((m: any) => ({
-                        name: m.name,
-                        status: 'pending',
-                        endDate: m.endDate ? new Date(m.endDate) : undefined
-                    }))
-                },
-                risks: {
-                    create: (body.risks || []).map((r: any) => ({
-                        description: r.description,
-                        probability: Number(r.probability) || 1,
-                        impact: Number(r.impact) || 1
+                code: `PRJ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+                territories: {
+                    create: (territoryIds || []).map((tid: string) => ({
+                        territoryId: tid
                     }))
                 }
             },
             include: {
-                milestones: true,
-                kpis: true,
-                risks: true
+                territories: true,
+                leader: true
             }
         });
 
-        logAudit("PROJECT_CREATED", "Project", newProject.id, session.sub, { title: newProject.title });
+        logAudit("PROJECT_CREATED", "Project", project.id, session.sub, { title });
 
-        return NextResponse.json(newProject);
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function PUT(request: Request) {
-    try {
-        const session = await requirePermission('projects:manage');
-        const body = await request.json();
-        const { id, ...updates } = body;
-
-        if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
-
-        const updated = await prisma.project.update({
-            where: { id },
-            data: {
-                status: updates.status,
-                priority: updates.priority
-            }
-        });
-
-        logAudit("PROJECT_APPROVED", "Project", id, session.sub, { updates });
-
-        return NextResponse.json(updated);
+        return NextResponse.json(project, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }
