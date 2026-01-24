@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
@@ -10,10 +10,8 @@ export async function GET(request: Request) {
   try {
     const session = await requirePermission('users:view');
 
-    const where: any = {};
-    if (session.territoryId) {
-      where.territoryId = session.territoryId;
-    }
+    const scopeFilter = await enforceScope(session);
+    const where: any = { ...scopeFilter };
 
     const users = await prisma.user.findMany({
       where,

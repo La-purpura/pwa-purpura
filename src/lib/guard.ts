@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { Permission, ROLE_PERMISSIONS, Role } from "@/lib/permissions";
+import { Permission, ROLE_PERMISSIONS, Role } from "@/lib/rbac";
 import { NextResponse } from "next/server";
 
 export class AuthError extends Error {
@@ -28,9 +28,7 @@ export async function requirePermission(permission: Permission) {
     const session = await requireAuth();
 
     const userRole = session.role as Role;
-    // Si es SuperAdmin, a veces tiene wildcard, pero aquí usamos lista explícita
     if (!userRole || !ROLE_PERMISSIONS[userRole]) {
-        // Fallback seguro
         throw new PermissionError("Rol de usuario inválido o sin esquema de permisos");
     }
 
@@ -40,6 +38,35 @@ export async function requirePermission(permission: Permission) {
     }
 
     return session;
+}
+
+/**
+ * enforceScope
+ * Genera un objeto de filtro para Prisma basado en el alcance territorial y de rama del usuario.
+ * @param session Sesión activa
+ * @param entityScope Propiedades de la entidad a considerar (territoryId, branchId)
+ * @param logic 'AND' (estricto) o 'OR' (visible si coincide territorio O rama O es global)
+ */
+export async function enforceScope(
+    session: any,
+    options: { branch?: boolean, territory?: boolean, logic?: 'AND' | 'OR' } = { branch: true, territory: true, logic: 'AND' }
+) {
+    if (session.role === 'SuperAdminNacional') return {};
+
+    const { branch = true, territory = true, logic = 'AND' } = options;
+
+    if (logic === 'OR') {
+        const orConditions: any[] = [{ territoryId: null, branchId: null }];
+        if (territory && session.territoryId) orConditions.push({ territoryId: session.territoryId });
+        if (branch && session.branchId) orConditions.push({ branchId: session.branchId });
+        return { OR: orConditions };
+    }
+
+    const filters: any = {};
+    if (branch && session.branchId) filters.branchId = session.branchId;
+    if (territory && session.territoryId) filters.territoryId = session.territoryId;
+
+    return filters;
 }
 
 export function handleApiError(error: any) {

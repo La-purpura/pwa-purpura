@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ export default function AuditLogsPage() {
 
   // Mock Audit Data
   const logs = [
-    { id: 1, action: "USER_LOGIN", user: "Juan PÃ©rez", territory: "Godoy Cruz", time: "Hace 2 min", status: "success" },
+    { id: 1, action: "USER_LOGIN", user: "Juan Pérez", territory: "Godoy Cruz", time: "Hace 2 min", status: "success" },
     { id: 2, action: "TASK_CREATED", user: "Maria Gomez", territory: "Capital", time: "Hace 15 min", status: "success" },
     { id: 3, action: "SYNC_ERROR", user: "Sistema", territory: "N/A", time: "Hace 1 hora", status: "warning" },
     { id: 4, action: "USER_INVITE", user: "Admin", territory: "Mendoza", time: "Ayer", status: "success" },
@@ -24,7 +24,7 @@ export default function AuditLogsPage() {
         <button onClick={() => router.back()} className="text-primary">
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
-        <h2 className="font-bold text-lg">Logs de AuditorÃ­a</h2>
+        <h2 className="font-bold text-lg">Logs de Auditoría</h2>
         <div className="w-6" />
       </header>
 
@@ -53,7 +53,7 @@ export default function AuditLogsPage() {
                   <span className="text-[10px] text-gray-400">{log.time}</span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  <span className="font-medium text-primary">{log.user}</span> â€¢ {log.territory}
+                  <span className="font-medium text-primary">{log.user}</span> • {log.territory}
                 </p>
               </div>
             </div>
@@ -62,7 +62,7 @@ export default function AuditLogsPage() {
 
         <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl flex gap-3 text-xs text-blue-700 dark:text-blue-300">
           <span className="material-symbols-outlined text-lg">info</span>
-          <p>Estos registros son inmutables y se conservan por 90 dÃ­as por razones de cumplimiento.</p>
+          <p>Estos registros son inmutables y se conservan por 90 días por razones de cumplimiento.</p>
         </div>
       </main>
     </div>

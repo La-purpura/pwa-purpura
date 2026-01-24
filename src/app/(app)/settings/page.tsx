@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useAppStore } from "@/lib/store";
-import { Role, ROLE_LABELS } from "@/lib/permissions";
+import { Role, ROLE_LABELS } from "@/lib/rbac";
 
 export default function SettingsPage() {
   const router = useRouter();

@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -20,7 +20,7 @@ export default function Home() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!identity.trim() || !password.trim()) {
-      alert("Completa usuario y contraseÃ±a para ingresar.");
+      alert("Completa usuario y contraseña para ingresar.");
       return;
     }
 
@@ -34,14 +34,14 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Error al iniciar sesiÃ³n");
+        alert(data.error || "Error al iniciar sesión");
         return;
       }
 
       // Login exitoso
       setUser(data.user);
 
-      // RedirecciÃ³n basada en rol
+      // Redirección basada en rol
       if (["SuperAdminNacional", "AdminNacional", "AdminProvincial"].includes(data.user.role)) {
         router.push("/dashboard");
       } else {
@@ -50,7 +50,7 @@ export default function Home() {
 
     } catch (error) {
       console.error(error);
-      alert("Error de conexiÃ³n");
+      alert("Error de conexión");
     }
   };
 
@@ -64,14 +64,14 @@ export default function Home() {
         <div className="mb-8 flex flex-col items-center">
           <div className="w-32 h-32 mb-4 relative drop-shadow-xl filter">
             <img
-              alt="La PÃºrpura Wolf Logo"
+              alt="La Púrpura Wolf Logo"
               className="w-full h-full object-contain transform hover:scale-105 transition-transform duration-500"
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQa0FxR3SZ0TfdFTkhotZxODDAKL89yCXMZFYafzSsJCymeP8eCT5g3w5hvXwjx4NdoFpSvaoPp_Wpy6L5x5eIiUkGtJh8-qYy-ZHSgaHkNz1OSn3LK5gXd7FWUV3QTanELtL_oIV9WiF9STme0CjP0u1m2Okis0WbEny7uBG86w_BNMvUuMmFWt-qXKpaAbgScJAhu3OiOunj1-QnkqmlnL7_yFEgJA0Nsd5dHD5QpR5oHDmrub719Vup56adKkPMHDNI4ikhebo"
             />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">La PÃºrpura</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">La Púrpura</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">
-            GestiÃ³n Operativa en Territorio
+            Gestión Operativa en Territorio
           </p>
         </div>
         <div className="w-full bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-xl border border-white/50 dark:border-white/5 backdrop-blur-sm">
@@ -98,7 +98,7 @@ export default function Home() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ml-1" htmlFor="password">
-                ContraseÃ±a
+                Contraseña
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -109,7 +109,7 @@ export default function Home() {
                 <input
                   className="block w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm sm:text-sm"
                   id="password"
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••"
                   type={passwordShown ? "text" : "password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -127,14 +127,14 @@ export default function Home() {
             </div>
             <div className="flex items-center justify-end">
               <Link className="text-xs font-medium text-primary hover:text-primary/80 transition-colors" href="/recover-password">
-                Â¿Olvidaste tu contraseÃ±a?
+                ¿Olvidaste tu contraseña?
               </Link>
             </div>
             <button
               className="w-full flex justify-center py-3.5 px-4 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 transform active:scale-[0.98] shadow-lg shadow-primary/20"
               type="submit"
             >
-              Iniciar SesiÃ³n
+              Iniciar Sesión
             </button>
           </form>
         </div>
@@ -150,7 +150,7 @@ export default function Home() {
             </div>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-600 text-center max-w-[260px] leading-tight">
-            VersiÃ³n de desarrollo v2.0
+            Versión de desarrollo v2.0
           </p>
         </div>
       </div>

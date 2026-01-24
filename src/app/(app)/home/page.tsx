@@ -1,4 +1,4 @@
-ÔªøÔªø"use client";
+?"use client";
 
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
@@ -73,7 +73,7 @@ export default function HomePage() {
     <div className="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark transition-colors duration-300 min-h-screen flex flex-col antialiased">
       <main className="flex-1 px-5 py-6 space-y-6 overflow-y-auto hide-scrollbar">
         <section>
-          <h2 className="text-2xl font-bold mb-4">Hola, {user?.name ?? "Compa√±ero"}</h2>
+          <h2 className="text-2xl font-bold mb-4">Hola, {user?.name ?? "CompaÒero"}</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-soft flex flex-col justify-between h-32 border border-gray-100 dark:border-gray-800 relative overflow-hidden group">
               <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -113,7 +113,7 @@ export default function HomePage() {
               Cola Offline
             </h3>
             <span className="bg-warning/10 text-warning px-2 py-0.5 rounded text-xs font-bold">
-              {queueCount} √çtems
+              {queueCount} Õtems
             </span>
           </div>
           <div className="bg-card-light dark:bg-card-dark rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -130,7 +130,7 @@ export default function HomePage() {
                   <div className="flex-1">
                     <h4 className="font-semibold text-sm">{item.title}</h4>
                     <p className="text-xs text-text-sub-light dark:text-text-sub-dark">
-                      {meta.subtitle} ‚Ä¢ {timeLabel}
+                      {meta.subtitle} ï {timeLabel}
                     </p>
                   </div>
                   <div className="shrink-0 flex items-center gap-2">
@@ -154,7 +154,7 @@ export default function HomePage() {
           </div>
         </section>
         <section>
-          <h3 className="text-lg font-bold mb-3">Acciones R√°pidas</h3>
+          <h3 className="text-lg font-bold mb-3">Acciones R·pidas</h3>
           <div className="grid grid-cols-3 gap-3 text-center">
             <Link href="/new-task" className="flex flex-col items-center gap-2 group">
               <div className="w-14 h-14 rounded-2xl bg-white dark:bg-card-dark shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center group-active:scale-95 transition-transform">
@@ -201,7 +201,7 @@ export default function HomePage() {
             href="/alerts/schedule"
             className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
           >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Nueva notificaci√≥n</p>
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Nueva notificaciÛn</p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-lg font-bold text-[#171216] dark:text-white">Enviar un aviso programado</p>
@@ -218,7 +218,7 @@ export default function HomePage() {
           <div className="px-4 pt-6 pb-2 flex items-center justify-between">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <span className="material-icons-round text-primary text-base">assignment_late</span>
-              Bandeja de revisi√≥n
+              Bandeja de revisiÛn
             </h3>
             <Link
               href="/alerts/review"
@@ -232,11 +232,11 @@ export default function HomePage() {
             href="/alerts/review"
             className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
           >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Pendientes cr√≠ticos</p>
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Pendientes crÌticos</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Revis√° los env√≠os recientes</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Filtr√° por territorio o rama</p>
+                <p className="text-lg font-bold text-[#171216] dark:text-white">Revis· los envÌos recientes</p>
+                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Filtr· por territorio o rama</p>
               </div>
               <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
                 <span className="material-symbols-outlined text-[16px]">inbox</span>
@@ -249,7 +249,7 @@ export default function HomePage() {
           <div className="px-4 pt-6 pb-2 flex items-center justify-between">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <span className="material-icons-round text-primary text-base">description</span>
-              Detalle de aprobaci√≥n
+              Detalle de aprobaciÛn
             </h3>
             <Link
               href="/alerts/approval"
@@ -263,7 +263,7 @@ export default function HomePage() {
             href="/alerts/approval"
             className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
           >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Revis√° un env√≠o</p>
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Revis· un envÌo</p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-lg font-bold text-[#171216] dark:text-white">Aprobar relevamientos</p>
@@ -297,8 +297,8 @@ export default function HomePage() {
             <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Versiones del documento</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Revis√° cambios previos</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Compar√° versiones anteriores</p>
+                <p className="text-lg font-bold text-[#171216] dark:text-white">Revis· cambios previos</p>
+                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Compar· versiones anteriores</p>
               </div>
               <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
                 <span className="material-symbols-outlined text-[16px]">history</span>
@@ -328,8 +328,8 @@ export default function HomePage() {
             <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Nuevo revisor</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Cambio r√°pido</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Eleg√≠ el mejor disponible</p>
+                <p className="text-lg font-bold text-[#171216] dark:text-white">Cambio r·pido</p>
+                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">ElegÌ el mejor disponible</p>
               </div>
               <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
                 <span className="material-symbols-outlined text-[16px]">sync_alt</span>
@@ -390,8 +390,8 @@ export default function HomePage() {
             <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Comprobante digital</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Descarg√° y compart√≠</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Validaci√≥n con QR y detalles</p>
+                <p className="text-lg font-bold text-[#171216] dark:text-white">Descarg· y compartÌ</p>
+                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">ValidaciÛn con QR y detalles</p>
               </div>
               <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
                 <span className="material-symbols-outlined text-[16px]">qr_code</span>
@@ -421,8 +421,8 @@ export default function HomePage() {
             <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Completar firma digital</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Valid√° y envi√° la firma</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">√öltimo paso para cerrar el relevamiento</p>
+                <p className="text-lg font-bold text-[#171216] dark:text-white">Valid· y envi· la firma</p>
+                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">⁄ltimo paso para cerrar el relevamiento</p>
               </div>
               <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
                 <span className="material-symbols-outlined text-[16px]">verified</span>
@@ -449,11 +449,11 @@ export default function HomePage() {
             href="/alerts/library"
             className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
           >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Documentaci√≥n oficial</p>
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">DocumentaciÛn oficial</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Revis√° categor√≠as</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Filtr√° por ramas o tipo</p>
+                <p className="text-lg font-bold text-[#171216] dark:text-white">Revis· categorÌas</p>
+                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Filtr· por ramas o tipo</p>
               </div>
               <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
                 <span className="material-symbols-outlined text-[16px]">storage</span>
@@ -472,7 +472,7 @@ export default function HomePage() {
               href="/milestones"
               className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
             >
-              Ver l√≠nea completa
+              Ver lÌnea completa
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </Link>
           </div>
@@ -480,11 +480,11 @@ export default function HomePage() {
             href="/milestones"
             className="block bg-card-light dark:bg-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-4 shadow-soft transition-all hover:shadow-md"
           >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Pr√≥ximo hito</p>
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">PrÛximo hito</p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-lg font-bold text-[#171216] dark:text-white">Desarrollo Operativo</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Finaliza 20 Nov ‚Ä¢ Progreso 65%</p>
+                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Finaliza 20 Nov ï Progreso 65%</p>
               </div>
               <span className="inline-flex items-center gap-1 text-xs font-bold text-primary">
                 Timeline
@@ -503,9 +503,9 @@ export default function HomePage() {
                 </span>
               </div>
               <div>
-                <h4 className="text-sm font-semibold">Validaci√≥n de equipo completa</h4>
+                <h4 className="text-sm font-semibold">ValidaciÛn de equipo completa</h4>
                 <p className="text-xs text-text-sub-light dark:text-text-sub-dark mt-0.5">
-                  Inventario verificado en almac√©n Norte.
+                  Inventario verificado en almacÈn Norte.
                 </p>
                 <span className="text-[10px] text-text-sub-light/70 dark:text-text-sub-dark/70 mt-2 block">
                   Hace 1 hora
@@ -521,7 +521,7 @@ export default function HomePage() {
               <div>
                 <h4 className="text-sm font-semibold">Ruta Actualizada</h4>
                 <p className="text-xs text-text-sub-light dark:text-text-sub-dark mt-0.5">
-                  Optimizaci√≥n aplicada para el turno tarde.
+                  OptimizaciÛn aplicada para el turno tarde.
                 </p>
                 <span className="text-[10px] text-text-sub-light/70 dark:text-text-sub-dark/70 mt-2 block">
                   Hace 3 horas

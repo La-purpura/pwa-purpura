@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
@@ -8,12 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const session = await requirePermission('forms:view');
-
-    const whereClause: any = {};
-
-    if (session.territoryId) {
-      whereClause.territoryId = session.territoryId;
-    }
+    const whereClause = await enforceScope(session);
 
     const tasks = await prisma.task.findMany({
       where: whereClause,

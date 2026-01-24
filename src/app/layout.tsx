@@ -1,4 +1,4 @@
-锘縤mport type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 
@@ -7,27 +7,27 @@ import { ThemeProvider } from "@/components/theme-provider";
 const manrope = Manrope({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "La P煤rpura - Gesti贸n Territorial",
-  description: "Sistema de gesti贸n territorial y coordinaci贸n pol铆tica",
+  title: "La P鷕pura - Gesti髇 Territorial",
+  description: "Sistema de gesti髇 territorial y coordinaci髇 pol韙ica",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "La P煤rpura",
+    title: "La P鷕pura",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: "website",
-    siteName: "La P煤rpura",
-    title: "La P煤rpura - Gesti贸n Territorial",
-    description: "Sistema de gesti贸n territorial y coordinaci贸n pol铆tica",
+    siteName: "La P鷕pura",
+    title: "La P鷕pura - Gesti髇 Territorial",
+    description: "Sistema de gesti髇 territorial y coordinaci髇 pol韙ica",
   },
   twitter: {
     card: "summary",
-    title: "La P煤rpura - Gesti贸n Territorial",
-    description: "Sistema de gesti贸n territorial y coordinaci贸n pol铆tica",
+    title: "La P鷕pura - Gesti髇 Territorial",
+    description: "Sistema de gesti髇 territorial y coordinaci髇 pol韙ica",
   },
 };
 

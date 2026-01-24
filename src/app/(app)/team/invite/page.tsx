@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ROLE_LABELS, Role } from "@/lib/permissions";
+import { ROLE_LABELS, Role } from "@/lib/rbac";
 
 interface Branch { id: string; name: string; }
 interface Territory { id: string; name: string; type: string; }

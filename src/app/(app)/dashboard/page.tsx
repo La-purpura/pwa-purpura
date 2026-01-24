@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 // Force recompile
 
 
@@ -11,18 +11,18 @@ import UserDashboardMobile from "@/components/dashboard/UserDashboardMobile";
 export default function DashboardPage() {
   const user = useAppStore((state) => state.user);
 
-  // Si no hay usuario cargado aÃºn (hidrataciÃ³n), o rol no definido, mostramos un estado de carga o nada
+  // Si no hay usuario cargado aún (hidratación), o rol no definido, mostramos un estado de carga o nada
   if (!user) return <div className="p-8 text-center text-gray-500">Cargando perfil...</div>;
 
-  // Definimos quÃ© roles ven el dashboard "Admin" (con gestiÃ³n)
+  // Definimos qué roles ven el dashboard "Admin" (con gestión)
   const isAdmin = ["SuperAdminNacional", "AdminNacional", "AdminProvincial", "Coordinador"].includes(user.role);
 
   return (
     <div className="max-w-[1600px] mx-auto">
       {/* 
-         LÃ³gica de Renderizado Responsivo:
-         Renderizamos tanto la versiÃ³n mÃ³vil como la de escritorio y las ocultamos/mostramos con CSS.
-         Esto es mÃ¡s robusto para SSR que usar hooks de tamaÃ±o de ventana y evita el flash inicial.
+         Lógica de Renderizado Responsivo:
+         Renderizamos tanto la versión móvil como la de escritorio y las ocultamos/mostramos con CSS.
+         Esto es más robusto para SSR que usar hooks de tamaño de ventana y evita el flash inicial.
       */}
 
       {isAdmin ? (

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { useState } from "react";
 import { useRBAC } from "@/hooks/useRBAC";
-import { Permission } from "@/lib/permissions";
+import { Permission } from "@/lib/rbac";
 
 export function Sidebar() {
     const router = useRouter();

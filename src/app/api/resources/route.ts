@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
 
@@ -11,13 +11,8 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const category = searchParams.get('category');
 
-        const where: any = {
-            OR: [
-                { territoryId: null, branchId: null },
-                { territoryId: session.territoryId },
-                { branchId: session.branchId }
-            ]
-        };
+        const scopeFilter = await enforceScope(session, { logic: 'OR' });
+        const where: any = { ...scopeFilter };
 
         if (category) where.category = category;
 

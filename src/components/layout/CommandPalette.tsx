@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { useRBAC } from "@/hooks/useRBAC";
-import { Permission } from "@/lib/permissions";
+import { Permission } from "@/lib/rbac";
 
 type Command = {
     id: string;

@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRBAC } from "@/hooks/useRBAC";
@@ -41,7 +41,7 @@ export default function LibraryPage() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-800 dark:text-white">Biblioteca de Recursos</h1>
-          <p className="text-gray-500">Manuales, protocolos y documentos estratÃ©gicos.</p>
+          <p className="text-gray-500">Manuales, protocolos y documentos estratégicos.</p>
         </div>
         {hasPermission('resources:manage') && (
           <a href="/admin/library" className="bg-[#851c74] text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md hover:scale-105 transition-all text-center">
@@ -70,7 +70,7 @@ export default function LibraryPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredResources.length === 0 ? (
           <div className="col-span-full py-20 text-center text-gray-400">
-            No se encontraron documentos en esta categorÃ­a.
+            No se encontraron documentos en esta categoría.
           </div>
         ) : (
           filteredResources.map(resource => (

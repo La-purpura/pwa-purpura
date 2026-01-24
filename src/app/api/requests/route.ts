@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
@@ -9,10 +9,8 @@ export async function GET(request: Request) {
     try {
         const session = await requirePermission('forms:view');
 
-        const where: any = {};
-        if (session.territoryId) {
-            where.territoryId = session.territoryId;
-        }
+        const scopeFilter = await enforceScope(session);
+        const where: any = { ...scopeFilter };
 
         const requests = await prisma.request.findMany({
             where,
@@ -48,7 +46,7 @@ export async function POST(request: Request) {
             }
         });
 
-        logAudit("REQUEST_SUBMITTED", "Request", newRequest.id, session.sub, { type: body.type });
+        logAudit("TASK_CREATED", "Request", newRequest.id, session.sub, { type: body.type });
 
         return NextResponse.json(newRequest, { status: 201 });
     } catch (error) {

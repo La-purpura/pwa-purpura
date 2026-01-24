@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -174,7 +174,7 @@ export default function NewsNewPage() {
               </div>
               <div className="flex-1 overflow-hidden">
                 <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">manual_usuario_v2.pdf</p>
-                <p className="text-[10px] text-gray-500 uppercase">2.4 MB • Biblioteca</p>
+                <p className="text-[10px] text-gray-500 uppercase">2.4 MB � Biblioteca</p>
               </div>
               <span className="material-symbols-outlined text-gray-400 cursor-pointer hover:text-red-500">delete</span>
             </div>

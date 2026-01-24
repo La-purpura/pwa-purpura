@@ -1,5 +1,5 @@
 import { useAppStore } from "@/lib/store";
-import { Permission, ROLE_PERMISSIONS, ROLE_LABELS } from "@/lib/permissions";
+import { Permission, ROLE_PERMISSIONS, ROLE_LABELS } from "@/lib/rbac";
 
 export function useRBAC() {
     const user = useAppStore((state) => state.user);

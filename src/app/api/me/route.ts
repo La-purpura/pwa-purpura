@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireAuth, handleApiError } from "@/lib/guard";
 import prisma from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const session = await getSession();
-
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const session = await requireAuth();
 
     const user = await prisma.user.findUnique({
       where: { id: session.sub },
@@ -44,7 +40,6 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error("GET /api/me error:", error);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return handleApiError(error);
   }
 }

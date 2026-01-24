@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -33,13 +33,13 @@ export default function NewIncidentPage() {
           setAddress(`${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`);
         },
         (error) => {
-          console.error("Error obteniendo ubicaciÃ³n:", error);
-          alert("No se pudo obtener la ubicaciÃ³n. Verifica los permisos.");
+          console.error("Error obteniendo ubicación:", error);
+          alert("No se pudo obtener la ubicación. Verifica los permisos.");
           setGettingLocation(false);
         }
       );
     } else {
-      alert("GeolocalizaciÃ³n no disponible en este dispositivo");
+      alert("Geolocalización no disponible en este dispositivo");
       setGettingLocation(false);
     }
   };
@@ -72,7 +72,7 @@ export default function NewIncidentPage() {
       }
     } catch (error) {
       console.error(error);
-      alert("Error de conexiÃ³n");
+      alert("Error de conexión");
     } finally {
       setSubmitting(false);
     }
@@ -86,13 +86,13 @@ export default function NewIncidentPage() {
     <div className="max-w-3xl mx-auto p-4 pb-24">
       <header className="mb-8">
         <h1 className="text-3xl font-black mb-2">Reportar Incidencia</h1>
-        <p className="text-gray-500">Documenta problemas en territorio con geolocalizaciÃ³n automÃ¡tica.</p>
+        <p className="text-gray-500">Documenta problemas en territorio con geolocalización automática.</p>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* TÃ­tulo */}
+        {/* Título */}
         <div className="bg-white dark:bg-[#20121d] p-6 rounded-3xl border border-gray-100 dark:border-gray-800">
-          <label className="block text-xs font-black uppercase text-gray-400 mb-2">TÃ­tulo de la Incidencia *</label>
+          <label className="block text-xs font-black uppercase text-gray-400 mb-2">Título de la Incidencia *</label>
           <input
             required
             value={title}
@@ -102,10 +102,10 @@ export default function NewIncidentPage() {
           />
         </div>
 
-        {/* CategorÃ­a y Prioridad */}
+        {/* Categoría y Prioridad */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white dark:bg-[#20121d] p-6 rounded-3xl border border-gray-100 dark:border-gray-800">
-            <label className="block text-xs font-black uppercase text-gray-400 mb-2">CategorÃ­a *</label>
+            <label className="block text-xs font-black uppercase text-gray-400 mb-2">Categoría *</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
@@ -130,14 +130,14 @@ export default function NewIncidentPage() {
               <option value="LOW">Baja</option>
               <option value="MEDIUM">Media</option>
               <option value="HIGH">Alta</option>
-              <option value="CRITICAL">CrÃ­tica</option>
+              <option value="CRITICAL">Crítica</option>
             </select>
           </div>
         </div>
 
-        {/* DescripciÃ³n */}
+        {/* Descripción */}
         <div className="bg-white dark:bg-[#20121d] p-6 rounded-3xl border border-gray-100 dark:border-gray-800">
-          <label className="block text-xs font-black uppercase text-gray-400 mb-2">DescripciÃ³n Detallada</label>
+          <label className="block text-xs font-black uppercase text-gray-400 mb-2">Descripción Detallada</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -146,13 +146,13 @@ export default function NewIncidentPage() {
           />
         </div>
 
-        {/* GeolocalizaciÃ³n */}
+        {/* Geolocalización */}
         <div className="bg-gradient-to-br from-[#851c74] to-purple-600 p-6 rounded-3xl text-white">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h3 className="font-black text-lg mb-1">UbicaciÃ³n GPS</h3>
+              <h3 className="font-black text-lg mb-1">Ubicación GPS</h3>
               <p className="text-sm opacity-90">
-                {latitude && longitude ? "âœ“ UbicaciÃ³n capturada" : "Presiona el botÃ³n para obtener tu ubicaciÃ³n"}
+                {latitude && longitude ? "? Ubicación capturada" : "Presiona el botón para obtener tu ubicación"}
               </p>
             </div>
             <button
@@ -184,7 +184,7 @@ export default function NewIncidentPage() {
             placeholder="https://ejemplo.com/foto.jpg"
             className="w-full bg-transparent border-none outline-none"
           />
-          <p className="text-xs text-gray-400 mt-2">Puedes subir la foto a un servicio externo y pegar el enlace aquÃ­.</p>
+          <p className="text-xs text-gray-400 mt-2">Puedes subir la foto a un servicio externo y pegar el enlace aquí.</p>
         </div>
 
         {/* Submit */}

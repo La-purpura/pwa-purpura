@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
@@ -16,12 +16,8 @@ export async function GET(request: Request) {
     const priority = searchParams.get('priority');
     const limit = searchParams.get('limit');
 
-    const where: any = {};
-
-    // Scope by territory if user is not admin
-    if (session.territoryId) {
-      where.territoryId = session.territoryId;
-    }
+    const scopeFilter = await enforceScope(session);
+    const where: any = { ...scopeFilter };
 
     if (status) where.status = status;
     if (category) where.category = category;
