@@ -4,23 +4,42 @@ import bcrypt from "bcryptjs";
 import { hashInviteToken } from "@/lib/invites";
 import { createSessionCookie } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { z } from "zod";
+import { handleApiError, applySecurityHeaders } from "@/lib/guard";
+import { rateLimit } from "@/lib/rate-limit";
 
-/**
- * POST /api/invites/consume
- * Consume la invitación, crea el usuario (o activa uno pendiente) y establece su contraseña.
- */
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+const ConsumeSchema = z.object({
+    token: z.string().min(10),
+    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+    confirmPassword: z.string()
+}).refine(data => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"]
+});
+
 export async function POST(request: Request) {
     try {
+        const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
+        const limiter = rateLimit(ip, { limit: 10, windowMs: 15 * 60 * 1000 }); // 10 attempts per 15 mins
+
+        if (!limiter.success) {
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Demasiados intentos. Por favor espere 15 minutos." }, { status: 429 }),
+                { noStore: true }
+            );
+        }
+
         const body = await request.json();
-        const { token, password, confirmPassword } = body;
+        const result = ConsumeSchema.safeParse(body);
 
-        if (!token || !password || !confirmPassword) {
-            return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
+        if (!result.success) {
+            return handleApiError(result.error);
         }
 
-        if (password !== confirmPassword) {
-            return NextResponse.json({ error: "Las contraseñas no coinciden" }, { status: 400 });
-        }
+        const { token, password } = result.data;
 
         // 1. Buscar invitación
         const tokenHash = hashInviteToken(token);
@@ -28,12 +47,15 @@ export async function POST(request: Request) {
             where: { tokenHash }
         });
 
-        if (!invitation || invitation.revokedAt || invitation.usedAt || invitation.expiresAt < new Date()) {
-            return NextResponse.json({ error: "Invitación inválida o expirada" }, { status: 400 });
+        if (!invitation || invitation.revokedAt || invitation.usedAt || (invitation.expiresAt && invitation.expiresAt < new Date())) {
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Invitación inválida o expirada" }, { status: 400 }),
+                { noStore: true }
+            );
         }
 
         // 2. Cifrar contraseña
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 12); // Slightly higher cost for protection
 
         // 3. Crear o actualizar usuario
         const fullName = `${invitation.firstName || ""} ${invitation.lastName || ""}`.trim() || invitation.email.split('@')[0];
@@ -41,7 +63,6 @@ export async function POST(request: Request) {
         let user = await prisma.user.findUnique({ where: { email: invitation.email } });
 
         if (user) {
-            // Si el usuario existe pero está PENDING (por ejemplo, creado vía seed o admin previo)
             user = await prisma.user.update({
                 where: { id: user.id },
                 data: {
@@ -49,11 +70,10 @@ export async function POST(request: Request) {
                     status: 'ACTIVE',
                     name: fullName,
                     branchId: invitation.branchId || user.branchId,
-                    territoryScope: invitation.territoryScope || user.territoryScope
+                    territoryScope: (invitation.territoryScope as any) || (user.territoryScope as any)
                 }
             });
         } else {
-            // Crear usuario nuevo
             user = await prisma.user.create({
                 data: {
                     email: invitation.email,
@@ -62,7 +82,7 @@ export async function POST(request: Request) {
                     role: invitation.role,
                     status: 'ACTIVE',
                     branchId: invitation.branchId,
-                    territoryScope: invitation.territoryScope
+                    territoryScope: invitation.territoryScope as any
                 }
             });
         }
@@ -75,10 +95,11 @@ export async function POST(request: Request) {
 
         // 5. Auditar
         logAudit("INVITE_ACCEPTED", "User", user.id, user.id, {
-            invitationId: invitation.id
+            invitationId: invitation.id,
+            ip
         });
 
-        // 6. Login Automático (Opcional según requerimiento, pero recomendado para UX)
+        // 6. Login Automático
         await createSessionCookie({
             sub: user.id,
             email: user.email,
@@ -87,7 +108,7 @@ export async function POST(request: Request) {
             branchId: user.branchId || undefined
         });
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
             message: "Cuenta activada correctamente",
             user: {
@@ -98,8 +119,9 @@ export async function POST(request: Request) {
             }
         });
 
+        return applySecurityHeaders(response, { noStore: true });
+
     } catch (error) {
-        console.error("Consume Invite Error:", error);
-        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+        return handleApiError(error);
     }
 }

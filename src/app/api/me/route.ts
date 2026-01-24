@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireAuth, handleApiError } from "@/lib/guard";
+import { requireAuth, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import prisma from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET() {
   try {

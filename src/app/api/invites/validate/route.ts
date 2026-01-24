@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { hashInviteToken } from "@/lib/invites";
+import { handleApiError, applySecurityHeaders } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/invites/validate?token=...
@@ -14,7 +16,10 @@ export async function GET(request: Request) {
         const token = searchParams.get("token");
 
         if (!token) {
-            return NextResponse.json({ error: "Token requerido" }, { status: 400 });
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Token requerido" }, { status: 400 }),
+                { noStore: true }
+            );
         }
 
         const tokenHash = hashInviteToken(token);
@@ -34,21 +39,33 @@ export async function GET(request: Request) {
         });
 
         if (!invitation) {
-            return NextResponse.json({ error: "Invitación no encontrada" }, { status: 404 });
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Invitación no encontrada" }, { status: 404 }),
+                { noStore: true }
+            );
         }
 
         // Verificar validez
         if (invitation.revokedAt) {
-            return NextResponse.json({ error: "Invitación revocada", code: "REVOKED" }, { status: 400 });
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Invitación revocada", code: "REVOKED" }, { status: 400 }),
+                { noStore: true }
+            );
         }
         if (invitation.usedAt) {
-            return NextResponse.json({ error: "Enlace ya utilizado", code: "USED" }, { status: 400 });
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Enlace ya utilizado", code: "USED" }, { status: 400 }),
+                { noStore: true }
+            );
         }
         if (invitation.expiresAt < new Date()) {
-            return NextResponse.json({ error: "Enlace expirado", code: "EXPIRED" }, { status: 400 });
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Enlace expirado", code: "EXPIRED" }, { status: 400 }),
+                { noStore: true }
+            );
         }
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             valid: true,
             email: invitation.email,
             firstName: invitation.firstName,
@@ -56,8 +73,9 @@ export async function GET(request: Request) {
             role: invitation.role
         });
 
+        return applySecurityHeaders(response, { noStore: true });
+
     } catch (error) {
-        console.error("Invite validation error:", error);
-        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+        return handleApiError(error);
     }
 }

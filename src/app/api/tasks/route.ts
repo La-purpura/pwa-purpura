@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+import { TaskSchema } from "@/lib/schemas";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/tasks
@@ -18,7 +20,6 @@ export async function GET(request: Request) {
     const territoryId = searchParams.get('territoryId');
     const query = searchParams.get('q');
 
-    // ABAC: Filtrar por alcance territorial many-to-many
     const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
 
     const where: any = {
@@ -28,7 +29,6 @@ export async function GET(request: Request) {
     if (status) where.status = status;
     if (assigneeId) where.assigneeId = assigneeId;
 
-    // Filtro explícito de territorio si se envía por query
     if (territoryId) {
       where.territories = { some: { territoryId } };
     }
@@ -56,7 +56,8 @@ export async function GET(request: Request) {
       dueDate: t.dueDate?.toISOString() || null
     }));
 
-    return NextResponse.json(mapped);
+    const response = NextResponse.json(mapped);
+    return applySecurityHeaders(response);
   } catch (error) {
     return handleApiError(error);
   }
@@ -64,16 +65,19 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/tasks
- * Acepta territoryIds[] para segmentación.
  */
 export async function POST(request: Request) {
   try {
     const session = await requirePermission('forms:create');
     const body = await request.json();
 
-    const { title, description, priority, dueDate, territoryIds, assigneeId } = body;
+    // Input Validation
+    const result = TaskSchema.safeParse(body);
+    if (!result.success) {
+      return handleApiError(result.error);
+    }
 
-    if (!title) return NextResponse.json({ error: "Título obligatorio" }, { status: 400 });
+    const { title, description, priority, dueDate, territoryIds, assigneeId } = result.data;
 
     const newTask = await prisma.task.create({
       data: {
@@ -94,7 +98,8 @@ export async function POST(request: Request) {
 
     logAudit("TASK_CREATED", "Task", newTask.id, session.sub, { title });
 
-    return NextResponse.json(newTask, { status: 201 });
+    const response = NextResponse.json(newTask, { status: 201 });
+    return applySecurityHeaders(response);
   } catch (error) {
     return handleApiError(error);
   }

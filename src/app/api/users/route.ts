@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+import { UserInviteSchema } from "@/lib/schemas";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
   try {
@@ -41,7 +43,8 @@ export async function GET(request: Request) {
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || "User")}&background=random`
     }));
 
-    return NextResponse.json(mapped);
+    const response = NextResponse.json(mapped);
+    return applySecurityHeaders(response, { noStore: true });
   } catch (error) {
     return handleApiError(error);
   }
@@ -52,41 +55,47 @@ export async function POST(request: Request) {
     const session = await requirePermission('users:invite');
     const body = await request.json();
 
-    if (!body.email || !body.role) {
-      return NextResponse.json({ error: "Faltan datos obligatorios (email, role)" }, { status: 400 });
+    // Input Validation with Zod
+    const result = UserInviteSchema.safeParse(body);
+    if (!result.success) {
+      return handleApiError(result.error);
     }
 
-    const existing = await prisma.user.findUnique({ where: { email: body.email } });
+    const { email, role, name, territoryId, branchId, password } = result.data;
+
+    const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json({ error: "El usuario ya existe" }, { status: 409 });
     }
 
-    const tempPassword = body.password || "Purpura2026!";
+    const tempPassword = password || "Purpura2026!";
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
     const newUser = await prisma.user.create({
       data: {
-        name: body.name || "Usuario Nuevo",
-        email: body.email,
-        role: body.role,
+        name: name || "Usuario Nuevo",
+        email: email,
+        role: role,
         passwordHash: hashedPassword,
         status: "ACTIVE",
-        territoryId: body.territoryId || null,
-        branchId: body.branchId || null
+        territoryId: territoryId || null,
+        branchId: branchId || null
       }
     });
 
     logAudit("USER_CREATED", "User", newUser.id, session.sub, {
-      email: body.email,
-      role: body.role,
-      assignedTerritory: body.territoryId
+      email,
+      role,
+      assignedTerritory: territoryId
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: { id: newUser.id, email: newUser.email },
       tempPassword
     }, { status: 201 });
+
+    return applySecurityHeaders(response, { noStore: true });
 
   } catch (error) {
     return handleApiError(error);

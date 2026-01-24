@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+import { IncidentSchema } from "@/lib/schemas";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/incidents
@@ -16,9 +18,9 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
     const category = searchParams.get('category');
     const priority = searchParams.get('priority');
-    const limit = searchParams.get('limit');
+    const limitParams = searchParams.get('limit');
+    const limit = limitParams ? parseInt(limitParams) : undefined;
 
-    // ABAC M-M
     const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
     const where: any = { ...scopeFilter };
 
@@ -34,7 +36,7 @@ export async function GET(request: Request) {
         territories: { include: { territory: { select: { name: true } } } }
       },
       orderBy: { createdAt: 'desc' },
-      take: limit ? parseInt(limit) : undefined
+      take: limit && limit > 0 && limit <= 100 ? limit : 50
     });
 
     const mapped = incidents.map(inc => ({
@@ -42,7 +44,8 @@ export async function GET(request: Request) {
       territoryNames: inc.territories.map(t => t.territory.name).join(', ') || 'Global'
     }));
 
-    return NextResponse.json(mapped);
+    const response = NextResponse.json(mapped);
+    return applySecurityHeaders(response);
   } catch (error) {
     return handleApiError(error);
   }
@@ -56,11 +59,12 @@ export async function POST(request: Request) {
     const session = await requirePermission('incidents:create');
     const body = await request.json();
 
-    if (!body.title || !body.category) {
-      return NextResponse.json({ error: "Faltan datos obligatorios (title, category)" }, { status: 400 });
+    const result = IncidentSchema.safeParse(body);
+    if (!result.success) {
+      return handleApiError(result.error);
     }
 
-    const { territoryIds, ...rest } = body;
+    const { territoryIds, ...rest } = result.data;
 
     const incident = await prisma.incident.create({
       data: {
@@ -72,7 +76,6 @@ export async function POST(request: Request) {
         latitude: rest.latitude,
         longitude: rest.longitude,
         address: rest.address,
-        photoUrl: rest.photoUrl,
         reportedById: session.sub,
         territories: {
           create: (territoryIds || []).map((tid: string) => ({
@@ -84,7 +87,8 @@ export async function POST(request: Request) {
 
     logAudit("ALERT_CREATED", "Incident", incident.id, session.sub, { title: incident.title });
 
-    return NextResponse.json(incident, { status: 201 });
+    const response = NextResponse.json(incident, { status: 201 });
+    return applySecurityHeaders(response);
   } catch (error) {
     return handleApiError(error);
   }

@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { Permission, ROLE_PERMISSIONS, Role } from "@/lib/rbac";
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 
 export class AuthError extends Error {
     constructor(message: string) {
@@ -96,12 +97,41 @@ export async function enforceScope(
 
 export function handleApiError(error: any) {
     if (error instanceof AuthError) {
-        return NextResponse.json({ error: error.message }, { status: 401 });
+        return NextResponse.json({ error: error.message }, {
+            status: 401,
+            headers: { 'Cache-Control': 'no-store' }
+        });
     }
     if (error instanceof PermissionError) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
+        return NextResponse.json({ error: error.message }, {
+            status: 403,
+            headers: { 'Cache-Control': 'no-store' }
+        });
+    }
+    if (error instanceof ZodError) {
+        return NextResponse.json({
+            error: "Datos de entrada inválidos",
+            details: error.issues.map(e => ({ path: e.path, message: e.message }))
+        }, { status: 400 });
     }
 
     console.error("Unhandled API Error:", error);
+    // En producción no deberíamos filtrar el stack trace o detalles internos
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+}
+
+/**
+ * applySecurityHeaders
+ * Agrega headers de seguridad y Cache-Control a la respuesta.
+ */
+export function applySecurityHeaders(res: NextResponse, options: { noStore?: boolean } = {}) {
+    res.headers.set('X-Frame-Options', 'DENY');
+    res.headers.set('X-Content-Type-Options', 'nosniff');
+    res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+    if (options.noStore) {
+        res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    }
+
+    return res;
 }

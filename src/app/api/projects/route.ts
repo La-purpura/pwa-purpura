@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import prisma from "@/lib/prisma";
-import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+import { ProjectSchema } from "@/lib/schemas";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/projects
- * Lista proyectos con filtros y ABAC enforcement.
  */
 export async function GET(request: Request) {
     try {
@@ -18,10 +19,8 @@ export async function GET(request: Request) {
         const territoryId = searchParams.get('territoryId');
         const query = searchParams.get('q');
 
-        // ABAC: Filtrar por alcance territorial
         const scopeFilter = await enforceScope(session);
 
-        // Construcción de consulta compatible con ProjectTerritory
         const where: any = {
             ...status ? { status } : {},
             ...territoryId ? {
@@ -50,7 +49,8 @@ export async function GET(request: Request) {
             orderBy: { createdAt: 'desc' }
         });
 
-        return NextResponse.json(projects);
+        const response = NextResponse.json(projects);
+        return applySecurityHeaders(response);
     } catch (error) {
         return handleApiError(error);
     }
@@ -58,16 +58,19 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/projects
- * Crea un nuevo proyecto (Borrador inicial).
  */
 export async function POST(request: Request) {
     try {
         const session = await requirePermission('projects:create');
         const body = await request.json();
 
-        const { title, description, branch, type, priority, territoryIds } = body;
+        // Validation
+        const result = ProjectSchema.safeParse(body);
+        if (!result.success) {
+            return handleApiError(result.error);
+        }
 
-        if (!title) return NextResponse.json({ error: 'Título requerido' }, { status: 400 });
+        const { title, description, branch, type, priority, territoryIds } = result.data;
 
         const project = await prisma.project.create({
             data: {
@@ -93,7 +96,8 @@ export async function POST(request: Request) {
 
         logAudit("PROJECT_CREATED", "Project", project.id, session.sub, { title });
 
-        return NextResponse.json(project, { status: 201 });
+        const response = NextResponse.json(project, { status: 201 });
+        return applySecurityHeaders(response);
     } catch (error) {
         return handleApiError(error);
     }

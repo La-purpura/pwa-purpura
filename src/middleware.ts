@@ -8,7 +8,6 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const session = request.cookies.get("session")?.value;
 
-    // Rutas protegidas (que requieren sesión)
     const isAppRoute = pathname.startsWith("/home") ||
         pathname.startsWith("/dashboard") ||
         pathname.startsWith("/tasks") ||
@@ -20,40 +19,58 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith("/settings") ||
         pathname.startsWith("/profile");
 
-    // Rutas de auth (que deben redirigir al dashboard si ya hay sesión)
     const isAuthRoute = pathname === "/" || pathname.startsWith("/auth/login");
 
-    if (isAppRoute && !session) {
-        return NextResponse.redirect(new URL("/", request.url));
-    }
+    let response: NextResponse;
 
-    if (isAuthRoute && session) {
+    if (isAppRoute && !session) {
+        response = NextResponse.redirect(new URL("/", request.url));
+    } else if (isAuthRoute && session) {
         try {
             await jwtVerify(session, key);
-            return NextResponse.redirect(new URL("/home", request.url));
+            response = NextResponse.redirect(new URL("/home", request.url));
         } catch (error) {
-            // Token inválido, dejar que siga
+            response = NextResponse.next();
         }
-    }
-
-    // Si hay sesión y es una ruta de app, intentar renovar la cookie (sliding window)
-    if (session && isAppRoute) {
+    } else if (session && isAppRoute) {
         const { updateSession } = await import("@/lib/auth");
-        return await updateSession(request);
+        const updatedResponse = await updateSession(request);
+        response = updatedResponse || NextResponse.next();
+    } else {
+        response = NextResponse.next();
     }
 
-    return NextResponse.next();
+    // --- Hardening: Security Headers ---
+    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('X-XSS-Protection', '1; mode=block');
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+
+    // Strict-Transport-Security (HSTS)
+    if (process.env.NODE_ENV === 'production') {
+        response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
+
+    // Content Security Policy (Basic)
+    // Note: In Next.js with many inline scripts, this might need dynamic nonce, 
+    // but for now a basic one that allows self and Google Fonts.
+    const cspHeader = `
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' blob: data: https://ui-avatars.com https://i.pravatar.cc https://lh3.googleusercontent.com;
+        connect-src 'self';
+    `.replace(/\s{2,}/g, ' ').trim();
+
+    response.headers.set('Content-Security-Policy', cspHeader);
+
+    return response;
 }
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         */
-        "/((?!api|_next/static|_next/image|favicon.ico).*)",
+        "/((?!_next/static|_next/image|favicon.ico).*)",
     ],
 };

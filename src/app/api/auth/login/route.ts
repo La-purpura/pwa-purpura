@@ -2,31 +2,62 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createSessionCookie } from "@/lib/auth";
+import { z } from "zod";
+import { handleApiError, applySecurityHeaders } from "@/lib/guard";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+const LoginSchema = z.object({
+    identifier: z.string().email().optional(),
+    email: z.string().email().optional(),
+    password: z.string().min(6)
+}).refine(data => data.identifier || data.email, {
+    message: "Debe proporcionar un email",
+    path: ["identifier"]
+});
 
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        const email = body.identifier || body.email;
-        const password = body.password;
+        // 1. Rate Limiting (Brute Force Protection)
+        const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
+        const limiter = rateLimit(ip, { limit: 5, windowMs: 60 * 1000 }); // 5 attempts per minute
 
-        if (!email || !password) {
-            return NextResponse.json({ error: "Faltan credenciales" }, { status: 400 });
+        if (!limiter.success) {
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Demasiados intentos. Reintente en un minuto." }, { status: 429 }),
+                { noStore: true }
+            );
         }
 
-        // Buscar usuario
+        // 2. Input Validation
+        const body = await request.json();
+        const result = LoginSchema.safeParse(body);
+
+        if (!result.success) {
+            return handleApiError(result.error);
+        }
+
+        const email = (result.data.identifier || result.data.email) as string;
+        const password = result.data.password;
+
+        // 3. User Lookup
         const user = await prisma.user.findUnique({
             where: { email },
             include: { territory: true, branch: true }
         });
 
+        // Constant time comparison placeholder if user not found
         if (!user) {
             await bcrypt.compare("fake", "$2a$10$fakehashfakehashfakehashfakehashfakehash");
-            return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 }),
+                { noStore: true }
+            );
         }
 
-        // Verificar Contraseña
+        // 4. Verify Password
         if (!user.passwordHash) {
             return NextResponse.json({ error: "Cuenta mal configurada" }, { status: 500 });
         }
@@ -34,15 +65,21 @@ export async function POST(request: Request) {
         const isValid = await bcrypt.compare(password, user.passwordHash);
 
         if (!isValid) {
-            return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 }),
+                { noStore: true }
+            );
         }
 
-        // Verificar Estado
+        // 5. Check Status
         if (user.status !== "ACTIVE") {
-            return NextResponse.json({ error: "Cuenta suspendida o inactiva" }, { status: 403 });
+            return applySecurityHeaders(
+                NextResponse.json({ error: "Cuenta suspendida o inactiva" }, { status: 403 }),
+                { noStore: true }
+            );
         }
 
-        // Crear Sesión persistente
+        // 6. Create Session
         await createSessionCookie({
             sub: user.id,
             email: user.email,
@@ -51,18 +88,18 @@ export async function POST(request: Request) {
             branchId: user.branchId || undefined
         });
 
-        // AUDIT LOG: Login Success
+        // 7. Audit Log
         await prisma.auditLog.create({
             data: {
                 action: 'LOGIN_SUCCESS',
                 entity: 'User',
                 entityId: user.id,
                 actorId: user.id,
-                metadata: JSON.stringify({ email: user.email, role: user.role })
+                metadata: JSON.stringify({ email: user.email, role: user.role, ip })
             }
         });
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             user: {
                 id: user.id,
                 email: user.email,
@@ -78,8 +115,9 @@ export async function POST(request: Request) {
             }
         });
 
+        return applySecurityHeaders(response, { noStore: true });
+
     } catch (error) {
-        console.error("Login error:", error);
-        return NextResponse.json({ error: "Error interno" }, { status: 500 });
+        return handleApiError(error);
     }
 }
