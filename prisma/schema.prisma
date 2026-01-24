@@ -16,9 +16,9 @@ model Territory {
   incidentTerritories IncidentTerritory[]
   postTerritories     PostTerritory[]
   projectTerritories ProjectTerritory[]
+  resourceTerritories ResourceTerritory[]
   taskTerritories     TaskTerritory[]
   requests           Request[]
-  resources          Resource[]
   parent             Territory?         @relation("Hierarchy", fields: [parentId], references: [id])
   children           Territory[]        @relation("Hierarchy")
   users              User[]
@@ -249,13 +249,21 @@ model Resource {
   url         String
   category    String
   branchId    String?
-  territoryId String?
   authorId    String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   author      User       @relation("AuthoredResources", fields: [authorId], references: [id])
   branch      Branch?    @relation(fields: [branchId], references: [id])
-  territory   Territory? @relation(fields: [territoryId], references: [id])
+  territories ResourceTerritory[]
+}
+
+model ResourceTerritory {
+  resourceId  String
+  territoryId String
+  resource    Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  territory   Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+
+  @@id([resourceId, territoryId])
 }
 
 model Incident {
