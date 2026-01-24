@@ -7,292 +7,236 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- M3: Territorios y Ramas ---
-
 model Territory {
-  id        String   @id @default(cuid())
-  name      String
-  type      String   // province, department, locality
-  parentId  String?
-  parent    Territory? @relation("Hierarchy", fields: [parentId], references: [id])
-  children  Territory[] @relation("Hierarchy")
-  
-  users     User[]
-  tasks     Task[]
+  id                 String             @id @default(cuid())
+  name               String
+  type               String
+  parentId           String?
+  incidents          Incident[]
+  posts              Post[]
   projectTerritories ProjectTerritory[]
-  requests  Request[]
-  posts     Post[]
-  resources Resource[]
-  incidents Incident[]
+  requests           Request[]
+  resources          Resource[]
+  tasks              Task[]
+  parent             Territory?         @relation("Hierarchy", fields: [parentId], references: [id])
+  children           Territory[]        @relation("Hierarchy")
+  users              User[]
 }
 
 model Branch {
-  id    String @id @default(cuid())
-  name  String @unique // PyME, Deportes, Salud...
-  users User[]
-  posts Post[]
+  id        String     @id @default(cuid())
+  name      String     @unique
+  posts     Post[]
   resources Resource[]
+  users     User[]
 }
 
-// --- M1/M4: Usuarios y Auth ---
-
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  passwordHash   String    // Argon2/Bcrypt hash
-  name           String?
-  role           String    // AdminNacional, SuperAdmin, etc.
-  branchId       String?
-  branch         Branch?   @relation(fields: [branchId], references: [id])
-  territoryScope Json?     // { provinceId, departmentId, localityId, multiple: [] }
-  status         String    @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING
-  
-  // Relaciones
-  sessions         Session[]
-  invitationsSent  Invitation[] @relation("InvitedBy")
-  assignedTasks    Task[]
-  requests         Request[]
-  ledProjects      Project[]
-  auditLogs        AuditLog[]
-  authoredPosts    Post[]       @relation("AuthoredPosts")
-  readPosts        PostRead[]
-  authoredResources Resource[]  @relation("AuthoredResources")
-  reportedIncidents Incident[]  @relation("ReportedIncidents")
-  assignedIncidents Incident[]  @relation("AssignedIncidents")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Campo Legacy
-  territoryId String?
-  territory   Territory? @relation(fields: [territoryId], references: [id])
+  id                String       @id @default(cuid())
+  email             String       @unique
+  passwordHash      String
+  name              String?
+  role              String
+  branchId          String?
+  territoryScope    Json?
+  status            String       @default("ACTIVE")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  territoryId       String?
+  auditLogs         AuditLog[]
+  assignedIncidents Incident[]   @relation("AssignedIncidents")
+  reportedIncidents Incident[]   @relation("ReportedIncidents")
+  invitationsSent   Invitation[] @relation("InvitedBy")
+  authoredPosts     Post[]       @relation("AuthoredPosts")
+  readPosts         PostRead[]
+  ledProjects       Project[]
+  requests          Request[]
+  authoredResources Resource[]   @relation("AuthoredResources")
+  sessions          Session[]
+  assignedTasks     Task[]
+  branch            Branch?      @relation(fields: [branchId], references: [id])
+  territory         Territory?   @relation(fields: [territoryId], references: [id])
 }
 
 model Session {
-  id         String   @id @default(cuid())
-  tokenHash  String   @unique
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime @default(now())
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
-// --- M5: Tasks ---
 
 model Task {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
   description String?
-  status      String   @default("pending") // pending, in_progress, done
-  priority    String   @default("medium")
+  status      String     @default("pending")
+  priority    String     @default("medium")
   dueDate     DateTime?
-  
   territoryId String?
-  territory   Territory? @relation(fields: [territoryId], references: [id])
-  
   assigneeId  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   assignee    User?      @relation(fields: [assigneeId], references: [id])
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  territory   Territory? @relation(fields: [territoryId], references: [id])
 }
-
-// --- M6: Alerts ---
 
 model Alert {
   id        String   @id @default(cuid())
   title     String
-  type      String   // info, warning, error, news
+  type      String
   message   String
   isRead    Boolean  @default(false)
-  
   createdAt DateTime @default(now())
 }
 
-// --- M7: Projects ---
-
 model Project {
-  id          String   @id @default(cuid())
-  code        String?  @unique
+  id          String             @id @default(cuid())
+  code        String?            @unique
   title       String
-  status      String   @default("draft")
-  priority    String   @default("medium")
-  type        String?  // Operativo, Institucional...
-  branch      String?  // Rama principal (texto o relation opcional)
+  status      String             @default("draft")
+  priority    String             @default("medium")
+  type        String?
+  branch      String?
   description String?
-  
   leaderId    String?
-  leader      User?    @relation(fields: [leaderId], references: [id])
-
-  territories ProjectTerritory[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  leader      User?              @relation(fields: [leaderId], references: [id])
   kpis        ProjectKPI[]
   milestones  ProjectMilestone[]
   risks       ProjectRisk[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  territories ProjectTerritory[]
 }
 
 model ProjectTerritory {
   projectId   String
-  project     Project @relation(fields: [projectId], references: [id])
   territoryId String
+  project     Project   @relation(fields: [projectId], references: [id])
   territory   Territory @relation(fields: [territoryId], references: [id])
 
   @@id([projectId, territoryId])
 }
 
 model ProjectKPI {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   projectId String
-  project   Project @relation(fields: [projectId], references: [id])
   name      String
   target    Float
-  current   Float @default(0)
-  unit      String   @default("%")
+  current   Float   @default(0)
+  unit      String  @default("%")
+  project   Project @relation(fields: [projectId], references: [id])
 }
 
 model ProjectMilestone {
-  id        String @id @default(cuid())
+  id        String    @id @default(cuid())
   projectId String
-  project   Project @relation(fields: [projectId], references: [id])
   name      String
-  status    String   @default("pending")
+  status    String    @default("pending")
   endDate   DateTime?
+  project   Project   @relation(fields: [projectId], references: [id])
 }
 
 model ProjectRisk {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   projectId   String
-  project     Project @relation(fields: [projectId], references: [id])
   description String
   probability Int
   impact      Int
+  project     Project @relation(fields: [projectId], references: [id])
 }
-
-// --- M8: Requests ---
 
 model Request {
-  id            String   @id @default(cuid())
-  type          String   // Relevamiento, etc.
-  data          String // JSON stringified
-  status        String   @default("pending")
+  id            String     @id @default(cuid())
+  type          String
+  data          String
+  status        String     @default("pending")
   feedback      String?
-  
   submittedById String
-  submittedBy   User     @relation(fields: [submittedById], references: [id])
-  
   territoryId   String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  submittedBy   User       @relation(fields: [submittedById], references: [id])
   territory     Territory? @relation(fields: [territoryId], references: [id])
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
 }
 
-// --- M9: Intranet & Communications ---
-
 model Post {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
   content     String
-  type        String   @default("news") // news, urgent, internal
-  
-  // Segmentation
+  type        String     @default("news")
   branchId    String?
-  branch      Branch?  @relation(fields: [branchId], references: [id])
   territoryId String?
-  territory   Territory? @relation(fields: [territoryId], references: [id])
-  
   authorId    String
-  author      User     @relation("AuthoredPosts", fields: [authorId], references: [id])
-  
-  isDraft     Boolean  @default(false)
-  publishedAt DateTime @default(now())
-  
+  isDraft     Boolean    @default(false)
+  publishedAt DateTime   @default(now())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  author      User       @relation("AuthoredPosts", fields: [authorId], references: [id])
+  branch      Branch?    @relation(fields: [branchId], references: [id])
+  territory   Territory? @relation(fields: [territoryId], references: [id])
   reads       PostRead[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 model PostRead {
   postId String
-  post   Post   @relation(fields: [postId], references: [id])
   userId String
-  user   User   @relation(fields: [userId], references: [id])
-  
   readAt DateTime @default(now())
+  post   Post     @relation(fields: [postId], references: [id])
+  user   User     @relation(fields: [userId], references: [id])
 
   @@id([postId, userId])
 }
 
-// --- M10: Resource Library (Documentation) ---
-
 model Resource {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
   description String?
-  url         String   // External link or storage ID
-  category    String   // Political, Technical, Manual, etc.
-  
-  // Segmentation
+  url         String
+  category    String
   branchId    String?
-  branch      Branch?  @relation(fields: [branchId], references: [id])
   territoryId String?
-  territory   Territory? @relation(fields: [territoryId], references: [id])
-  
   authorId    String
-  author      User     @relation("AuthoredResources", fields: [authorId], references: [id])
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  author      User       @relation("AuthoredResources", fields: [authorId], references: [id])
+  branch      Branch?    @relation(fields: [branchId], references: [id])
+  territory   Territory? @relation(fields: [territoryId], references: [id])
 }
-
-// --- M12: Sistema de Incidencias Georeferenciadas ---
 
 model Incident {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  category    String   // Infraestructura, Seguridad, Social, Salud, etc.
-  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
-  status      String   @default("PENDING") // PENDING, IN_PROGRESS, RESOLVED, CLOSED
-  
-  // Geolocalización
-  latitude    Float?
-  longitude   Float?
-  address     String?
-  
-  // Evidencia
-  photoUrl    String?  // URL externa o base64
-  
-  // Asignación y seguimiento
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  category     String
+  priority     String     @default("MEDIUM")
+  status       String     @default("PENDING")
+  latitude     Float?
+  longitude    Float?
+  address      String?
+  photoUrl     String?
   reportedById String
-  reportedBy   User    @relation("ReportedIncidents", fields: [reportedById], references: [id])
-  
   assignedToId String?
-  assignedTo   User?   @relation("AssignedIncidents", fields: [assignedToId], references: [id])
-  
   territoryId  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  resolvedAt   DateTime?
+  assignedTo   User?      @relation("AssignedIncidents", fields: [assignedToId], references: [id])
+  reportedBy   User       @relation("ReportedIncidents", fields: [reportedById], references: [id])
   territory    Territory? @relation(fields: [territoryId], references: [id])
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  resolvedAt  DateTime?
 }
-
-// --- M2: Auditoría ---
 
 model AuditLog {
   id        String   @id @default(cuid())
-  action    String   // Ej: TASK_CREATED, USER_LOGIN
-  entity    String   // Ej: Task, Project
-  entityId  String   // ID del objeto afectado
-  actorId   String   // Usuario que hizo la acción
-  actor     User     @relation(fields: [actorId], references: [id])
-  metadata  String?  // JSON con detalles (Old value -> New value)
+  action    String
+  entity    String
+  entityId  String
+  actorId   String
+  metadata  String?
   createdAt DateTime @default(now())
+  actor     User     @relation(fields: [actorId], references: [id])
 }
 
 model Invitation {
@@ -305,10 +249,8 @@ model Invitation {
   expiresAt      DateTime
   usedAt         DateTime?
   revokedAt      DateTime?
-  
   createdById    String
-  invitedBy      User      @relation("InvitedBy", fields: [createdById], references: [id])
-  
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  invitedBy      User      @relation("InvitedBy", fields: [createdById], references: [id])
 }
