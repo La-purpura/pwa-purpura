@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * POST /api/requests/:id/reject
+ */
 export async function POST(
     request: Request,
     { params }: { params: { id: string } }
@@ -24,15 +28,7 @@ export async function POST(
             }
         });
 
-        await prisma.auditLog.create({
-            data: {
-                action: 'REQUEST_REJECTED',
-                entity: 'Request',
-                entityId: id,
-                actorId: session.sub,
-                metadata: JSON.stringify({ feedback })
-            }
-        });
+        logAudit("REQUEST_REJECTED", "Request", id, session.sub, { feedback });
 
         return NextResponse.json(updated);
     } catch (error) {

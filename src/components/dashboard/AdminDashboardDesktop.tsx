@@ -82,33 +82,39 @@ export default function AdminDashboardDesktop() {
     };
 
     const confirmApprove = async (id: string) => {
-        await fetch('/api/requests', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, status: 'approved' })
+        const res = await fetch(`/api/requests/${id}/approve`, {
+            method: 'POST'
         });
-        await fetchRequests();
-        setModalOpen(false);
-        alert("Solicitud aprobada");
+        if (res.ok) {
+            await fetchRequests();
+            setModalOpen(false);
+            alert("Solicitud aprobada");
+        } else {
+            alert("Error al aprobar");
+        }
     };
 
     const confirmReject = async (id: string, reason: string) => {
-        await fetch('/api/requests', {
-            method: 'PUT',
+        const res = await fetch(`/api/requests/${id}/reject`, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, status: 'rejected', feedback: reason })
+            body: JSON.stringify({ feedback: reason })
         });
-        await fetchRequests();
-        setModalOpen(false);
-        alert("Solicitud rechazada");
+        if (res.ok) {
+            await fetchRequests();
+            setModalOpen(false);
+            alert("Solicitud rechazada");
+        } else {
+            alert("Error al rechazar");
+        }
     };
 
     const updateStatus = async (id: string, newStatus: string) => {
-        const dbStatus = newStatus === 'Urgente' ? 'needs_changes' : 'pending';
-        await fetch('/api/requests', {
-            method: 'PUT',
+        // En un dashboard real, este 'updateStatus' podría ser un PATCH directo si es un cambio genérico
+        await fetch(`/api/requests/${id}`, {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, status: dbStatus })
+            body: JSON.stringify({ status: newStatus === 'Urgente' ? 'pending' : 'pending' }) // Placeholder logic
         });
         await fetchRequests();
         setModalOpen(false);

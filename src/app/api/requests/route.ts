@@ -5,6 +5,10 @@ import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/requests
+ * Lista solicitudes con filtros de alcance ABAC.
+ */
 export async function GET(request: Request) {
     try {
         const session = await requirePermission('forms:view');
@@ -27,26 +31,38 @@ export async function GET(request: Request) {
     }
 }
 
+/**
+ * POST /api/requests
+ * Crea una nueva solicitud o informe.
+ */
 export async function POST(request: Request) {
     try {
         const session = await requirePermission('forms:create');
         const body = await request.json();
 
-        if (!body.type || !body.data) {
-            return NextResponse.json({ error: "Faltan datos (type, data)" }, { status: 400 });
+        const { type, data, territoryId } = body;
+
+        if (!type || !data) {
+            return NextResponse.json({ error: "Faltan datos obligatorios (type, data)" }, { status: 400 });
+        }
+
+        // Valida territorio (si no es nacional, usa el suyo)
+        let finalTerritoryId = territoryId;
+        if (session.role !== 'SuperAdminNacional' && session.territoryId) {
+            finalTerritoryId = session.territoryId;
         }
 
         const newRequest = await prisma.request.create({
             data: {
-                type: body.type,
-                data: JSON.stringify(body.data),
+                type,
+                data: typeof data === 'string' ? data : JSON.stringify(data),
                 status: "pending",
                 submittedById: session.sub,
-                territoryId: session.territoryId || body.territoryId || null
+                territoryId: finalTerritoryId || null
             }
         });
 
-        logAudit("TASK_CREATED", "Request", newRequest.id, session.sub, { type: body.type });
+        logAudit("REQUEST_CREATED", "Request", newRequest.id, session.sub, { type });
 
         return NextResponse.json(newRequest, { status: 201 });
     } catch (error) {
