@@ -1,536 +1,184 @@
-?"use client";
+"use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
-const fallbackQueue = [
-  {
-    id: "offline-placeholder-1",
-    title: "Site Inspection Photos",
-    createdAt: "2023-10-27T10:45:00Z",
-    status: "pending",
-    type: "media",
-  },
-  {
-    id: "offline-placeholder-2",
-    title: "Maintenance Report",
-    createdAt: "2023-10-27T10:30:00Z",
-    status: "pending",
-    type: "task",
-  },
-];
-
-const queueMeta: Record<
-  string,
-  { icon: string; subtitle: string }
-> = {
-  media: { icon: "camera_alt", subtitle: "Sector 7G" },
-  task: { icon: "edit_note", subtitle: "Unidad #402" },
-  incident: { icon: "warning", subtitle: "Incidencia" },
-  draft: { icon: "description", subtitle: "Borrador" },
-};
+interface ActivityItem {
+    id: string;
+    type: 'TASK' | 'INCIDENT' | 'ALERT';
+    title: string;
+    timestamp: string;
+    user: string;
+    status: string;
+}
 
 export default function HomePage() {
-  const user = useAppStore((state) => state.user);
-  const tasks = useAppStore((state) => state.tasks);
-  const kpis = useAppStore((state) => state.kpis);
-  const offlineQueue = useAppStore((state) => state.offlineQueue);
+    const { user } = useAppStore();
+    const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+    const [summary, setSummary] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-  const pendingTasks = kpis.pendingTasks;
-  const highPriorityCount = tasks.filter(
-    (task) => task.status === "pending"
-  ).length;
-  const queueCount = offlineQueue.filter((item) => item.status !== "synced").length;
-  const queueItems = offlineQueue.length ? offlineQueue.slice(0, 2) : fallbackQueue;
-  const syncedCount = offlineQueue.filter((item) => item.status === "synced").length;
-  const syncPercent = offlineQueue.length
-    ? Math.round((syncedCount / offlineQueue.length) * 100)
-    : 100;
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [sumRes, taskRes, incRes] = await Promise.all([
+                    fetch('/api/dashboard/summary'),
+                    fetch('/api/tasks?limit=5'),
+                    fetch('/api/incidents?limit=5')
+                ]);
 
-  const formatQueueTime = (value: string) => {
-    if (!value) return "Ahora";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "Ahora";
-    return parsed.toLocaleTimeString("es-AR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+                const sumData = await sumRes.json();
+                const taskData = await taskRes.json();
+                const incData = await incRes.json();
 
-  const statusLabel = (status: string) => {
-    if (status === "synced") return "Sincronizado";
-    if (status === "syncing") return "Sincronizando";
-    return "En cola";
-  };
+                setSummary(sumData);
 
-  const statusDot = (status: string) => {
-    if (status === "synced") return "bg-success";
-    if (status === "syncing") return "bg-primary";
-    return "bg-warning";
-  };
+                // Merge and sort activity
+                const activities: ActivityItem[] = [
+                    ...((Array.isArray(taskData) ? taskData : [])).map((t: any) => ({
+                        id: t.id,
+                        type: 'TASK' as const,
+                        title: t.title,
+                        timestamp: t.createdAt,
+                        user: t.assigneeName || 'Sin asignar',
+                        status: t.status
+                    })),
+                    ...((Array.isArray(incData) ? incData : [])).map((i: any) => ({
+                        id: i.id,
+                        type: 'INCIDENT' as const,
+                        title: i.title,
+                        timestamp: i.createdAt,
+                        user: i.reportedBy?.name || 'Sistema',
+                        status: i.status
+                    }))
+                ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10);
 
-  return (
-    <div className="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark transition-colors duration-300 min-h-screen flex flex-col antialiased">
-      <main className="flex-1 px-5 py-6 space-y-6 overflow-y-auto hide-scrollbar">
-        <section>
-          <h2 className="text-2xl font-bold mb-4">Hola, {user?.name ?? "Compañero"}</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-soft flex flex-col justify-between h-32 border border-gray-100 dark:border-gray-800 relative overflow-hidden group">
-              <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                <span className="material-icons-round text-6xl text-primary">assignment</span>
-              </div>
-              <div className="flex items-center gap-2 text-primary">
-                <span className="material-icons-round">assignment</span>
-                <span className="text-sm font-medium">Pendientes</span>
-              </div>
-              <div>
-                <span className="text-3xl font-bold">{pendingTasks}</span>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">
-                  Prioridad alta: {highPriorityCount}
-                </p>
-              </div>
+                setRecentActivity(activities);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
+    }, []);
+
+    const todayStr = format(new Date(), "EEEE, d 'de' MMMM", { locale: es });
+
+    return (
+        <main className="min-h-screen pb-24 px-4 pt-6 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+            <header className="flex flex-col gap-1">
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white">Resumen Diario</h1>
+                <p className="text-xs font-black uppercase text-[#851c74] tracking-[0.3em]">{todayStr}</p>
+            </header>
+
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard label="Tareas" value={summary?.tasks?.pending || 0} color="bg-purple-600" />
+                <StatCard label="Incidencias" value={summary?.incidents?.total || 0} color="bg-orange-500" />
+                <StatCard label="Alertas" value={summary?.alerts?.active || 0} color="bg-red-500" />
+                <StatCard label="Proyectos" value={summary?.projects?.total || 0} color="bg-blue-600" />
+            </section>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <section className="lg:col-span-2 space-y-6">
+                    <h2 className="text-lg font-black flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[#851c74]">tactic</span>
+                        Actividad en Tiempo Real
+                    </h2>
+
+                    <div className="space-y-4">
+                        {loading ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                                <div key={i} className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-2xl"></div>
+                            ))
+                        ) : recentActivity.length === 0 ? (
+                            <p className="text-gray-400 italic text-center py-10">No hay actividad reciente registrada.</p>
+                        ) : (
+                            recentActivity.map((activity) => (
+                                <div key={`${activity.type}-${activity.id}`} className="flex items-start gap-4 p-4 bg-white dark:bg-[#1a1a1a] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
+                                    <div className={`mt-1 size-10 rounded-full flex items-center justify-center shrink-0 ${activity.type === 'TASK' ? 'bg-purple-100 text-purple-600' :
+                                            activity.type === 'INCIDENT' ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'
+                                        }`}>
+                                        <span className="material-symbols-outlined text-lg">
+                                            {activity.type === 'TASK' ? 'task_alt' : 'report_problem'}
+                                        </span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                {activity.type === 'TASK' ? 'Tarea' : 'Incidencia'}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-gray-300">
+                                                {format(new Date(activity.timestamp), 'HH:mm')}
+                                            </span>
+                                        </div>
+                                        <h4 className="font-bold text-gray-900 dark:text-white truncate">{activity.title}</h4>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Por <span className="font-bold text-gray-700 dark:text-gray-300">{activity.user}</span> â€¢
+                                            <span className={`ml-1 uppercase font-black text-[9px] ${activity.status === 'PENDING' || activity.status === 'pending' ? 'text-amber-500' : 'text-green-500'}`}>
+                                                {activity.status}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </section>
+
+                <aside className="space-y-6">
+                    <div className="bg-[#851c74] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden group">
+                        <div className="relative z-10">
+                            <h3 className="text-xl font-black mb-2">Comandancia</h3>
+                            <p className="text-white/70 text-sm mb-6">Accede a las herramientas crÃ­ticas de gestiÃ³n territorial.</p>
+                            <Link href="/dashboard" className="inline-flex items-center gap-2 bg-white text-[#851c74] px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">
+                                Panel de Control
+                                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            </Link>
+                        </div>
+                        <span className="material-symbols-outlined absolute -bottom-4 -right-4 text-[120px] text-white/10 rotate-12">dashboard</span>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800">
+                        <h4 className="font-black text-xs uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-sm">quick_reference</span>
+                            Acciones RÃ¡pidas
+                        </h4>
+                        <div className="grid grid-cols-1 gap-3">
+                            <QuickButton href="/new-task" label="Crear Tarea" icon="add_task" />
+                            <QuickButton href="/incidents/new" label="Reportar Evento" icon="report_gmailerrorred" />
+                            <QuickButton href="/alerts" label="Emitir Broadcast" icon="podcasts" />
+                        </div>
+                    </div>
+                </aside>
             </div>
-            <div className="bg-primary p-4 rounded-xl shadow-lg shadow-purple-900/20 flex flex-col justify-between h-32 text-white relative overflow-hidden">
-              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
-              <div className="flex items-center gap-2 text-white/90">
-                <span className="material-icons-round animate-spin text-sm">sync</span>
-                <span className="text-sm font-medium">Sincronizando</span>
-              </div>
-              <div>
-                <span className="text-3xl font-bold">{syncPercent}%</span>
-                <p className="text-xs text-white/70">Subiendo datos...</p>
-              </div>
-              <div className="w-full bg-white/20 h-1.5 rounded-full mt-2 overflow-hidden">
-                <div className="bg-white h-full rounded-full" style={{ width: `${syncPercent}%` }}></div>
-              </div>
+        </main>
+    );
+}
+
+function StatCard({ label, value, color }: { label: string, value: number, color: string }) {
+    return (
+        <div className="bg-white dark:bg-[#1a1a1a] p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4">
+            <div className={`size-1.5 rounded-full ${color}`}></div>
+            <div>
+                <span className="block text-xl font-black text-gray-900 dark:text-white tracking-tight">{value}</span>
+                <span className="block text-[10px] font-black uppercase text-gray-400 tracking-widest">{label}</span>
             </div>
-          </div>
-        </section>
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-warning text-base">cloud_off</span>
-              Cola Offline
-            </h3>
-            <span className="bg-warning/10 text-warning px-2 py-0.5 rounded text-xs font-bold">
-              {queueCount} Ítems
-            </span>
-          </div>
-          <div className="bg-card-light dark:bg-card-dark rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800 overflow-hidden">
-            {queueItems.map((item) => {
-              const meta = queueMeta[item.type] ?? queueMeta.task;
-              const timeLabel = formatQueueTime(item.createdAt);
-              return (
-                <div key={item.id} className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                    <span className="material-icons-round text-text-sub-light dark:text-text-sub-dark">
-                      {meta.icon}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-sm">{item.title}</h4>
-                    <p className="text-xs text-text-sub-light dark:text-text-sub-dark">
-                      {meta.subtitle} • {timeLabel}
-                    </p>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-2">
-                    <span className="text-xs font-medium text-text-sub-light dark:text-text-sub-dark">
-                      {statusLabel(item.status)}
-                    </span>
-                    <span className={`w-2 h-2 rounded-full ${statusDot(item.status)}`}></span>
-                  </div>
-                </div>
-              );
-            })}
-            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 flex justify-center">
-              <Link
-                href="/offline-queue"
-                className="text-primary text-sm font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity"
-              >
-                Ver cola completa
-                <span className="material-icons-round text-sm">chevron_right</span>
-              </Link>
+        </div>
+    );
+}
+
+function QuickButton({ href, label, icon }: { href: string, label: string, icon: string }) {
+    return (
+        <Link href={href} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-[#851c74]/5 hover:text-[#851c74] transition-all group">
+            <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-gray-400 group-hover:text-[#851c74] transition-colors">{icon}</span>
+                <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
             </div>
-          </div>
-        </section>
-        <section>
-          <h3 className="text-lg font-bold mb-3">Acciones Rápidas</h3>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <Link href="/new-task" className="flex flex-col items-center gap-2 group">
-              <div className="w-14 h-14 rounded-2xl bg-white dark:bg-card-dark shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center group-active:scale-95 transition-transform">
-                <span className="material-icons-round text-primary text-2xl">add_circle</span>
-              </div>
-              <span className="text-xs font-medium text-text-sub-light dark:text-text-sub-dark">
-                Nueva Tarea
-              </span>
-            </Link>
-            <Link href="/scan" className="flex flex-col items-center gap-2 group">
-              <div className="w-14 h-14 rounded-2xl bg-white dark:bg-card-dark shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center group-active:scale-95 transition-transform">
-                <span className="material-icons-round text-primary text-2xl">qr_code_scanner</span>
-              </div>
-              <span className="text-xs font-medium text-text-sub-light dark:text-text-sub-dark">
-                Escanear
-              </span>
-            </Link>
-            {/* Map Removed */}
-            <Link href="/history" className="flex flex-col items-center gap-2 group">
-              <div className="w-14 h-14 rounded-2xl bg-white dark:bg-card-dark shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center group-active:scale-95 transition-transform">
-                <span className="material-icons-round text-primary text-2xl">history</span>
-              </div>
-              <span className="text-xs font-medium text-text-sub-light dark:text-text-sub-dark">
-                Historial
-              </span>
-            </Link>
-          </div>
-        </section>
-        <section>
-          <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-primary text-base">notifications</span>
-              Programar alerta
-            </h3>
-            <Link
-              href="/alerts/schedule"
-              className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            >
-              Abrir
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/alerts/schedule"
-            className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Nueva notificación</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Enviar un aviso programado</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Elige contenido, segmento y horario</p>
-              </div>
-              <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
-                <span className="material-symbols-outlined text-[16px]">schedule</span>
-                Programar
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <div className="px-4 pt-6 pb-2 flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-primary text-base">assignment_late</span>
-              Bandeja de revisión
-            </h3>
-            <Link
-              href="/alerts/review"
-              className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            >
-              Abrir
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/alerts/review"
-            className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Pendientes críticos</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Revisá los envíos recientes</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Filtrá por territorio o rama</p>
-              </div>
-              <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
-                <span className="material-symbols-outlined text-[16px]">inbox</span>
-                Bandeja
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <div className="px-4 pt-6 pb-2 flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-primary text-base">description</span>
-              Detalle de aprobación
-            </h3>
-            <Link
-              href="/alerts/approval"
-              className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            >
-              Abrir
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/alerts/approval"
-            className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Revisá un envío</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Aprobar relevamientos</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Ver fotos, notas y comentarios</p>
-              </div>
-              <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
-                <span className="material-symbols-outlined text-[16px]">verified</span>
-                Aprobar
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <div className="px-4 pt-6 pb-2 flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-primary text-base">history</span>
-              Historial
-            </h3>
-            <Link
-              href="/alerts/history"
-              className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            >
-              Abrir
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/alerts/history"
-            className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Versiones del documento</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Revisá cambios previos</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Compará versiones anteriores</p>
-              </div>
-              <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
-                <span className="material-symbols-outlined text-[16px]">history</span>
-                Historial
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <div className="px-4 pt-6 pb-2 flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-primary text-base">verified_user</span>
-              Reasignar
-            </h3>
-            <Link
-              href="/alerts/reassign"
-              className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            >
-              Abrir
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/alerts/reassign"
-            className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Nuevo revisor</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Cambio rápido</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Elegí el mejor disponible</p>
-              </div>
-              <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
-                <span className="material-symbols-outlined text-[16px]">sync_alt</span>
-                Se te ha asignado &apos;Censo B. La Gloria&apos;
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <div className="px-4 pt-6 pb-2 flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-primary text-base">block</span>
-              Baja definitiva
-            </h3>
-            <Link
-              href="/alerts/revoke"
-              className="text-sm font-semibold text-primary hover:opacity-80 inline-flex items-center gap-1"
-            >
-              Abrir
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/alerts/revoke"
-            className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Revocar usuario</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Baja definitiva</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Acceso inmediato removido</p>
-              </div>
-              <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
-                <span className="material-symbols-outlined text-[16px]">gavel</span>
-                Revocar
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <div className="px-4 pt-6 pb-2 flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-primary text-base">local_post_office</span>
-              Comprobante
-            </h3>
-            <Link
-              href="/alerts/receipt"
-              className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            >
-              Abrir
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/alerts/receipt"
-            className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Comprobante digital</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Descargá y compartí</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Validación con QR y detalles</p>
-              </div>
-              <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
-                <span className="material-symbols-outlined text-[16px]">qr_code</span>
-                Comprobante
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <div className="px-4 pt-6 pb-2 flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-primary text-base">app_registration</span>
-              Firma digital
-            </h3>
-            <Link
-              href="/alerts/signature"
-              className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            >
-              Abrir
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/alerts/signature"
-            className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Completar firma digital</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Validá y enviá la firma</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Último paso para cerrar el relevamiento</p>
-              </div>
-              <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
-                <span className="material-symbols-outlined text-[16px]">verified</span>
-                Firmar
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <div className="px-4 pt-6 pb-2 flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-icons-round text-primary text-base">folder_open</span>
-              Biblioteca
-            </h3>
-            <Link
-              href="/alerts/library"
-              className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            >
-              Abrir
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/alerts/library"
-            className="block mx-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-card-dark p-4 shadow-soft transition-all hover:shadow-lg"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">Documentación oficial</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Revisá categorías</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Filtrá por ramas o tipo</p>
-              </div>
-              <span className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase">
-                <span className="material-symbols-outlined text-[16px]">storage</span>
-                Datos
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-base">timeline</span>
-              Hitos y riesgos
-            </h3>
-            <Link
-              href="/milestones"
-              className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-            >
-              Ver línea completa
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
-          </div>
-          <Link
-            href="/milestones"
-            className="block bg-card-light dark:bg-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-4 shadow-soft transition-all hover:shadow-md"
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Próximo hito</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-[#171216] dark:text-white">Desarrollo Operativo</p>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Finaliza 20 Nov • Progreso 65%</p>
-              </div>
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-primary">
-                Timeline
-                <span className="material-symbols-outlined text-[16px]">timeline</span>
-              </span>
-            </div>
-          </Link>
-        </section>
-        <section>
-          <h3 className="text-lg font-bold mb-3">Actividad Reciente</h3>
-          <div className="space-y-3">
-            <div className="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-soft flex items-start gap-3 border-l-4 border-success">
-              <div className="mt-0.5">
-                <span className="material-icons-round text-success text-sm bg-success/10 p-1.5 rounded-full">
-                  check
-                </span>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold">Validación de equipo completa</h4>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark mt-0.5">
-                  Inventario verificado en almacén Norte.
-                </p>
-                <span className="text-[10px] text-text-sub-light/70 dark:text-text-sub-dark/70 mt-2 block">
-                  Hace 1 hora
-                </span>
-              </div>
-            </div>
-            <div className="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-soft flex items-start gap-3 border-l-4 border-primary">
-              <div className="mt-0.5">
-                <span className="material-icons-round text-primary text-sm bg-primary/10 p-1.5 rounded-full">
-                  update
-                </span>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold">Ruta Actualizada</h4>
-                <p className="text-xs text-text-sub-light dark:text-text-sub-dark mt-0.5">
-                  Optimización aplicada para el turno tarde.
-                </p>
-                <span className="text-[10px] text-text-sub-light/70 dark:text-text-sub-dark/70 mt-2 block">
-                  Hace 3 horas
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
-  );
+            <span className="material-symbols-outlined text-gray-300 text-sm">chevron_right</span>
+        </Link>
+    );
 }

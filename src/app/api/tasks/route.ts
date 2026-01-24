@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     const assigneeId = searchParams.get('assigneeId');
     const territoryId = searchParams.get('territoryId');
     const query = searchParams.get('q');
+    const limit = searchParams.get('limit');
 
     const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
 
@@ -46,7 +47,8 @@ export async function GET(request: Request) {
         assignee: { select: { id: true, name: true, email: true } },
         territories: { include: { territory: { select: { name: true } } } }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: limit ? parseInt(limit) : undefined
     });
 
     const mapped = tasks.map(t => ({

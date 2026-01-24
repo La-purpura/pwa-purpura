@@ -9,11 +9,17 @@ import { CriticalIncidents } from "@/components/dashboard/CriticalIncidents";
 export default function UserDashboardDesktop() {
     const { user } = useAppStore();
     const [summary, setSummary] = useState<any>(null);
+    const [recentTasks, setRecentTasks] = useState<any[]>([]);
 
     useEffect(() => {
         fetch('/api/dashboard/summary')
             .then(res => res.json())
             .then(setSummary)
+            .catch(console.error);
+
+        fetch('/api/tasks?limit=4')
+            .then(res => res.json())
+            .then(setRecentTasks)
             .catch(console.error);
     }, []);
 
@@ -72,11 +78,36 @@ export default function UserDashboardDesktop() {
                         />
                     </div>
 
-                    {/* Placeholder for real task list preview if needed, or link to tasks */}
-                    <div className="bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] p-8 border border-gray-100 dark:border-gray-800 text-center space-y-4">
-                        <span className="material-symbols-outlined text-4xl text-gray-200">rocket_launch</span>
-                        <p className="text-gray-400 font-bold text-sm">Explora el mapa de tareas para comenzar tu jornada.</p>
-                        <Link href="/tasks" className="inline-block bg-[#851c74] text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest">Ir a Mis Tareas</Link>
+                    {/* Real Tasks Preview */}
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] p-8 border border-gray-100 dark:border-gray-800 space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="material-symbols-outlined text-[#851c74] text-sm">schedule</span>
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Próximos Pasos</h4>
+                        </div>
+
+                        {recentTasks.length === 0 ? (
+                            <div className="text-center py-6">
+                                <span className="material-symbols-outlined text-4xl text-gray-200">rocket_launch</span>
+                                <p className="text-gray-400 font-bold text-sm mt-2">No tenés tareas inmediatas.</p>
+                                <Link href="/new-task" className="inline-block mt-4 text-[#851c74] font-black text-[10px] uppercase hover:underline">Crear Tarea Nueva</Link>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-3">
+                                {recentTasks.map(t => (
+                                    <Link key={t.id} href={`/tasks/${t.id}`} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-700 group">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`size-2 rounded-full ${t.priority === 'high' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
+                                            <div className="text-left">
+                                                <p className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#851c74] transition-colors">{t.title}</p>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase">{t.status} • {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'Sin fecha'}</p>
+                                            </div>
+                                        </div>
+                                        <span className="material-symbols-outlined text-gray-300 text-sm">chevron_right</span>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                        <Link href="/tasks" className="inline-block bg-[#851c74] text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest mt-4">Gestión Completa</Link>
                     </div>
                 </section>
 

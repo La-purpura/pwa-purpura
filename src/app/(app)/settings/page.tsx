@@ -106,62 +106,6 @@ export default function SettingsPage() {
           </button>
         </section>
 
-        {/* Developer Tools - Role Switcher */}
-        <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <div className="bg-gray-50 dark:bg-gray-900 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 className="text-xs font-bold uppercase text-gray-500 flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm">construction</span>
-              Debug Tools
-            </h2>
-            <span className="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-bold">DEV ONLY</span>
-          </div>
-
-          <div className="p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 font-medium">Simular Rol de Usuario:</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(Object.entries(ROLE_LABELS) as [Role, string][]).map(([roleKey, label]) => {
-                const isActive = user?.role === roleKey;
-                return (
-                  <button
-                    key={roleKey}
-                    onClick={() => {
-                      if (user) {
-                        // Update role and set appropriate territory mock
-                        const newTerritory = roleKey === "SuperAdminNacional" || roleKey === "AdminNacional" ? "Nacional"
-                          : roleKey === "AdminProvincial" ? "Buenos Aires"
-                            : "San Isidro";
-
-                        setUser({ ...user, role: roleKey, territory: newTerritory });
-                      }
-                    }}
-                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${isActive
-                      ? "border-[#851c74] bg-[#851c74] text-white shadow-md"
-                      : "border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-                      }`}
-                  >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isActive ? "bg-white text-[#851c74]" : "bg-gray-100 dark:bg-gray-800"
-                      }`}>
-                      {label.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-bold truncate ${isActive ? "text-white" : "text-gray-800 dark:text-gray-200"}`}>{label}</p>
-                      <p className={`text-[10px] truncate ${isActive ? "text-white/80" : "text-gray-400"}`}>{roleKey}</p>
-                    </div>
-                    {isActive && <span className="material-symbols-outlined text-sm">check_circle</span>}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 text-xs rounded-lg flex items-start gap-2">
-              <span className="material-symbols-outlined text-sm mt-0.5">info</span>
-              <p>
-                Al cambiar de rol, el Sidebar, Dashboard y CommandPalette se actualizarán inmediatamente para reflejar los permisos de <strong>{ROLE_LABELS[user?.role || "SuperAdminNacional"]}</strong>.
-              </p>
-            </div>
-          </div>
-        </section>
       </div>
     </main>
   );
