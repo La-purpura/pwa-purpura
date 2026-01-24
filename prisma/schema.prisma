@@ -12,13 +12,13 @@ model Territory {
   name               String
   type               String
   parentId           String?
-  alerts             Alert[]
-  incidents          Incident[]
-  posts              Post[]
+  alertTerritories   AlertTerritory[]
+  incidentTerritories IncidentTerritory[]
+  postTerritories     PostTerritory[]
   projectTerritories ProjectTerritory[]
+  taskTerritories     TaskTerritory[]
   requests           Request[]
   resources          Resource[]
-  tasks              Task[]
   parent             Territory?         @relation("Hierarchy", fields: [parentId], references: [id])
   children           Territory[]        @relation("Hierarchy")
   users              User[]
@@ -77,17 +77,24 @@ model Task {
   status      String     @default("pending")
   priority    String     @default("medium")
   dueDate     DateTime?
-  territoryId String?
   assigneeId  String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   assignee    User?      @relation(fields: [assigneeId], references: [id])
-  territory   Territory? @relation(fields: [territoryId], references: [id])
+  territories TaskTerritory[]
 
   @@index([status])
   @@index([assigneeId])
-  @@index([territoryId])
   @@index([createdAt])
+}
+
+model TaskTerritory {
+  taskId      String
+  territoryId String
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  territory   Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, territoryId])
 }
 
 model Alert {
@@ -97,15 +104,22 @@ model Alert {
   type        String      @default("info")
   severity    String      @default("medium")
   status      String      @default("active")
-  territoryId String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  territory   Territory?  @relation(fields: [territoryId], references: [id])
+  territories AlertTerritory[]
   reads       AlertRead[]
 
   @@index([status])
   @@index([severity])
-  @@index([territoryId])
+}
+
+model AlertTerritory {
+  alertId     String
+  territoryId String
+  alert       Alert     @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  territory   Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+
+  @@id([alertId, territoryId])
 }
 
 model AlertRead {
@@ -194,7 +208,6 @@ model Post {
   content     String
   type        String     @default("news")
   branchId    String?
-  territoryId String?
   authorId    String
   isDraft     Boolean    @default(false)
   publishedAt DateTime   @default(now())
@@ -202,8 +215,20 @@ model Post {
   updatedAt   DateTime   @updatedAt
   author      User       @relation("AuthoredPosts", fields: [authorId], references: [id])
   branch      Branch?    @relation(fields: [branchId], references: [id])
-  territory   Territory? @relation(fields: [territoryId], references: [id])
+  territories PostTerritory[]
   reads       PostRead[]
+
+  @@index([publishedAt])
+  @@index([branchId])
+}
+
+model PostTerritory {
+  postId      String
+  territoryId String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  territory   Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+
+  @@id([postId, territoryId])
 }
 
 model PostRead {
@@ -214,6 +239,7 @@ model PostRead {
   user   User     @relation(fields: [userId], references: [id])
 
   @@id([postId, userId])
+  @@index([userId])
 }
 
 model Resource {
@@ -245,13 +271,21 @@ model Incident {
   photoUrl     String?
   reportedById String
   assignedToId String?
-  territoryId  String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   resolvedAt   DateTime?
   assignedTo   User?      @relation("AssignedIncidents", fields: [assignedToId], references: [id])
   reportedBy   User       @relation("ReportedIncidents", fields: [reportedById], references: [id])
-  territory    Territory? @relation(fields: [territoryId], references: [id])
+  territories  IncidentTerritory[]
+}
+
+model IncidentTerritory {
+  incidentId  String
+  territoryId String
+  incident    Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  territory   Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+
+  @@id([incidentId, territoryId])
 }
 
 model AuditLog {

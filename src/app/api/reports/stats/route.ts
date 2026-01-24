@@ -20,7 +20,7 @@ export async function GET(request: Request) {
             prisma.task.count({ where: whereTasks }),
             prisma.user.count({ where: whereUsers }),
             prisma.task.count({ where: { ...whereTasks, status: 'pending' } }),
-            prisma.alert.count({ where: { status: 'active' } })
+            prisma.alert.count({ where: { status: 'active' } as any })
         ]);
 
         return NextResponse.json({

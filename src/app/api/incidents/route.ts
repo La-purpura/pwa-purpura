@@ -5,7 +5,9 @@ import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
-// GET: List incidents with filters
+/**
+ * GET /api/incidents
+ */
 export async function GET(request: Request) {
   try {
     const session = await requirePermission('incidents:view');
@@ -16,7 +18,8 @@ export async function GET(request: Request) {
     const priority = searchParams.get('priority');
     const limit = searchParams.get('limit');
 
-    const scopeFilter = await enforceScope(session);
+    // ABAC M-M
+    const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
     const where: any = { ...scopeFilter };
 
     if (status) where.status = status;
@@ -26,30 +29,28 @@ export async function GET(request: Request) {
     const incidents = await prisma.incident.findMany({
       where,
       include: {
-        reportedBy: {
-          select: { name: true, email: true }
-        },
-        assignedTo: {
-          select: { name: true, email: true }
-        },
-        territory: {
-          select: { name: true }
-        }
+        reportedBy: { select: { name: true, email: true } },
+        assignedTo: { select: { name: true, email: true } },
+        territories: { include: { territory: { select: { name: true } } } }
       },
-      orderBy: [
-        { priority: 'desc' },
-        { createdAt: 'desc' }
-      ],
+      orderBy: { createdAt: 'desc' },
       take: limit ? parseInt(limit) : undefined
     });
 
-    return NextResponse.json(incidents);
+    const mapped = incidents.map(inc => ({
+      ...inc,
+      territoryNames: inc.territories.map(t => t.territory.name).join(', ') || 'Global'
+    }));
+
+    return NextResponse.json(mapped);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-// POST: Create new incident
+/**
+ * POST /api/incidents
+ */
 export async function POST(request: Request) {
   try {
     const session = await requirePermission('incidents:create');
@@ -59,27 +60,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Faltan datos obligatorios (title, category)" }, { status: 400 });
     }
 
+    const { territoryIds, ...rest } = body;
+
     const incident = await prisma.incident.create({
       data: {
-        title: body.title,
-        description: body.description,
-        category: body.category,
-        priority: body.priority || 'MEDIUM',
+        title: rest.title,
+        description: rest.description,
+        category: rest.category,
+        priority: rest.priority || 'MEDIUM',
         status: 'PENDING',
-        latitude: body.latitude,
-        longitude: body.longitude,
-        address: body.address,
-        photoUrl: body.photoUrl,
+        latitude: rest.latitude,
+        longitude: rest.longitude,
+        address: rest.address,
+        photoUrl: rest.photoUrl,
         reportedById: session.sub,
-        territoryId: session.territoryId || body.territoryId
+        territories: {
+          create: (territoryIds || []).map((tid: string) => ({
+            territoryId: tid
+          }))
+        }
       }
     });
 
-    logAudit("ALERT_CREATED", "Incident", incident.id, session.sub, {
-      title: incident.title,
-      category: incident.category,
-      priority: incident.priority
-    });
+    logAudit("ALERT_CREATED", "Incident", incident.id, session.sub, { title: incident.title });
 
     return NextResponse.json(incident, { status: 201 });
   } catch (error) {

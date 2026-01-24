@@ -1,22 +1,26 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requireAuth, handleApiError } from "@/lib/guard";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
-// POST: Register that the current user has read the post
+/**
+ * POST /api/posts/:id/read
+ * Registra que el usuario actual leyó el comunicado.
+ */
 export async function POST(
     request: Request,
     { params }: { params: { id: string } }
 ) {
     try {
-        const session = await requirePermission('posts:view');
-        const { id } = params;
+        const session = await requireAuth();
+        const { id: postId } = params;
 
         const postRead = await prisma.postRead.upsert({
             where: {
                 postId_userId: {
-                    postId: id,
+                    postId,
                     userId: session.sub
                 }
             },
@@ -24,23 +28,13 @@ export async function POST(
                 readAt: new Date()
             },
             create: {
-                postId: id,
+                postId,
                 userId: session.sub
             }
         });
 
-        const post = await prisma.post.findUnique({ where: { id } });
-        if (post?.type === 'urgent') {
-            await prisma.auditLog.create({
-                data: {
-                    action: 'POST_READ',
-                    entity: 'Post',
-                    entityId: id,
-                    actorId: session.sub,
-                    metadata: JSON.stringify({ title: post.title })
-                }
-            });
-        }
+        // Solo auditamos lectura si no es un post trivial (opcional)
+        logAudit("POST_READ", "Post", postId, session.sub);
 
         return NextResponse.json({ success: true, readAt: postRead.readAt });
     } catch (error) {

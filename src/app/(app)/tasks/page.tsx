@@ -9,12 +9,11 @@ type Task = {
   title: string;
   description: string | null;
   status: "pending" | "in_progress" | "completed";
-  priority: "low" | "medium" | "high";
+  priority: "low" | "medium" | "high" | "critical";
   dueDate: string | null;
   assigneeName: string;
   assigneeId: string | null;
-  territoryName: string;
-  territoryId: string | null;
+  territories: { id: string, name: string }[];
 };
 
 export default function TasksPage() {
@@ -28,13 +27,13 @@ export default function TasksPage() {
     setLoading(true);
     try {
       let url = '/api/tasks';
-      if (activeFilter === "urgent") url += '?priority=high';
-      if (activeFilter === "assigned") url += `?assigneeId=${user?.id}`;
-      // Territory filter is handled server-side by scope, but we could add explicit filter if needed
+      const params = new URLSearchParams();
+      if (activeFilter === "urgent") params.append('priority', 'high');
+      if (activeFilter === "assigned" && user?.id) params.append('assigneeId', user.id);
 
-      const res = await fetch(url);
-      const data = await res.json();
-      if (Array.isArray(data)) {
+      const res = await fetch(`${url}?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
         setTasks(data);
       }
     } catch (e) {
@@ -50,8 +49,8 @@ export default function TasksPage() {
 
   const { highPriority, otherPending, completed } = useMemo(() => {
     return {
-      highPriority: tasks.filter(t => t.priority === "high" && t.status !== "completed"),
-      otherPending: tasks.filter(t => t.status !== "completed" && t.priority !== "high"),
+      highPriority: tasks.filter(t => (t.priority === "high" || t.priority === "critical") && t.status !== "completed"),
+      otherPending: tasks.filter(t => t.status !== "completed" && t.priority !== "high" && t.priority !== "critical"),
       completed: tasks.filter(t => t.status === "completed")
     };
   }, [tasks]);
@@ -63,9 +62,9 @@ export default function TasksPage() {
   };
 
   const statusBadge = (status: string) => {
-    if (status === "in_progress") return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
-    if (status === "pending") return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
-    return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (status === "in_progress") return "bg-blue-50 text-blue-600 dark:bg-blue-900/20";
+    if (status === "pending") return "bg-amber-50 text-amber-600 dark:bg-amber-900/20";
+    return "bg-green-50 text-green-600 dark:bg-green-900/20";
   };
 
   const statusLabel = (status: string) => {
@@ -75,42 +74,39 @@ export default function TasksPage() {
   };
 
   return (
-    <main className="pb-24 pt-4 px-4 space-y-6 max-w-4xl mx-auto">
+    <main className="pb-24 pt-4 px-4 space-y-6 max-w-4xl mx-auto min-h-screen">
       {/* Filtros */}
       <div className="flex gap-2 px-1 pb-2 overflow-x-auto no-scrollbar">
         {[
           { id: "all", label: "Todas" },
           { id: "urgent", label: "Urgentes" },
-          { id: "assigned", label: "Asignadas a mí" }
+          { id: "assigned", label: "Mías" }
         ].map((filter) => (
           <button
             key={filter.id}
             onClick={() => setActiveFilter(filter.id)}
-            className={`flex h-9 shrink-0 items-center justify-center rounded-full px-5 shadow-sm transition-all ${activeFilter === filter.id
-              ? "bg-[#851c74] text-white font-bold"
-              : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400 font-medium"
+            className={`flex h-10 shrink-0 items-center justify-center rounded-full px-6 shadow-sm transition-all text-xs font-black uppercase tracking-widest ${activeFilter === filter.id
+              ? "bg-[#851c74] text-white"
+              : "bg-white dark:bg-gray-800 text-gray-400 border border-gray-100 dark:border-gray-700"
               }`}
           >
-            <p className="text-sm">{filter.label}</p>
+            {filter.label}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="py-20 text-center text-gray-500">
-          <div className="animate-spin h-8 w-8 border-2 border-[#851c74] border-t-transparent rounded-full mx-auto mb-4"></div>
-          Cargando tareas...
-        </div>
+        <div className="py-20 text-center text-gray-500 font-bold animate-pulse">Sincronizando tareas...</div>
       ) : tasks.length === 0 ? (
-        <div className="py-20 text-center bg-gray-50 dark:bg-gray-800/20 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <p className="text-gray-500 italic">No se encontraron tareas en esta categoría.</p>
+        <div className="py-20 text-center bg-gray-50 dark:bg-gray-800/20 rounded-[2.5rem] border-2 border-dashed border-gray-200 dark:border-gray-700">
+          <p className="text-gray-400 font-bold italic">No hay tareas programadas.</p>
         </div>
       ) : (
-        <>
+        <div className="space-y-8">
           {highPriority.length > 0 && (
             <section>
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-red-500 mb-3 px-1">Prioridad Crítica</h3>
-              <div className="space-y-3">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 mb-4 px-2">Prioridad Critica</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {highPriority.map((task) => (
                   <TaskCard key={task.id} task={task} onClick={() => router.push(`/tasks/${task.id}`)} formatDueDate={formatDueDate} statusBadge={statusBadge} statusLabel={statusLabel} />
                 ))}
@@ -120,8 +116,8 @@ export default function TasksPage() {
 
           {otherPending.length > 0 && (
             <section>
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3 px-1">Próximas Tareas</h3>
-              <div className="space-y-3">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4 px-2">Hoja de Ruta</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {otherPending.map((task) => (
                   <TaskCard key={task.id} task={task} onClick={() => router.push(`/tasks/${task.id}`)} formatDueDate={formatDueDate} statusBadge={statusBadge} statusLabel={statusLabel} />
                 ))}
@@ -131,63 +127,73 @@ export default function TasksPage() {
 
           {completed.length > 0 && (
             <section>
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#851c74] mb-3 px-1">Completadas</h3>
-              <div className="space-y-2 opacity-70">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-green-500 mb-4 px-2">Finalizadas</h3>
+              <div className="space-y-3 opacity-60">
                 {completed.map((task) => (
                   <div
                     key={task.id}
-                    className="bg-white/60 dark:bg-gray-800/40 rounded-xl p-4 border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-between"
+                    className="bg-white dark:bg-gray-800/40 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 flex items-center justify-between cursor-pointer"
                     onClick={() => router.push(`/tasks/${task.id}`)}
                   >
                     <div className="flex-1">
-                      <h4 className="text-sm font-bold text-gray-400 dark:text-gray-500 line-through">{task.title}</h4>
-                      <p className="text-[10px] text-gray-400">Finalizada el {formatDueDate(task.dueDate)}</p>
+                      <h4 className="text-sm font-bold text-gray-500 line-through">{task.title}</h4>
+                      <p className="text-[10px] text-gray-400 font-bold">{task.territories.map(t => t.name).join(', ') || 'Global'}</p>
                     </div>
-                    <span className="material-symbols-outlined text-green-500">check_circle</span>
+                    <span className="material-symbols-outlined text-green-500">verified</span>
                   </div>
                 ))}
               </div>
             </section>
           )}
-        </>
+        </div>
       )}
 
       <button
-        className="fixed right-6 bottom-24 size-14 bg-[#851c74] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-50 group"
+        className="fixed right-6 bottom-24 size-14 bg-[#851c74] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-40"
         onClick={() => router.push("/new-task")}
       >
-        <span className="material-symbols-outlined text-3xl group-hover:rotate-90 transition-transform duration-300">add</span>
+        <span className="material-symbols-outlined text-3xl">add_task</span>
       </button>
     </main>
   );
 }
 
 function TaskCard({ task, onClick, formatDueDate, statusBadge, statusLabel }: { task: Task, onClick: () => void, formatDueDate: any, statusBadge: any, statusLabel: any }) {
+  const territoryDisplay = task.territories.map(t => t.name).join(', ') || 'Global';
+
   return (
     <div
       onClick={onClick}
-      className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 hover:border-[#851c74]/30 transition-all cursor-pointer group active:scale-[0.98]"
+      className="bg-white dark:bg-[#1a1a1a] rounded-[2rem] p-6 shadow-sm border border-gray-100 dark:border-gray-800 hover:border-[#851c74]/20 transition-all cursor-pointer group active:scale-[0.98] relative overflow-hidden"
     >
-      <div className="flex justify-between items-start mb-3">
-        <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${statusBadge(task.status)}`}>
+      <div className="flex justify-between items-start mb-4">
+        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${statusBadge(task.status)}`}>
           {statusLabel(task.status)}
         </span>
-        <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
-          <span className="material-symbols-outlined text-xs">calendar_today</span>
+        <div className="flex items-center gap-1.5 text-gray-400 font-bold text-[10px] uppercase">
+          <span className="material-symbols-outlined text-sm">event</span>
           {formatDueDate(task.dueDate)}
-        </span>
-      </div>
-      <h4 className="text-base font-bold text-gray-800 dark:text-white leading-snug mb-3 group-hover:text-[#851c74] transition-colors">{task.title}</h4>
-      <div className="flex flex-wrap gap-x-4 gap-y-2">
-        <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-          <span className="material-symbols-outlined text-sm">location_on</span>
-          <span className="text-[11px] font-semibold">{task.territoryName}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-          <span className="material-symbols-outlined text-sm">person</span>
-          <span className="text-[11px] font-semibold truncate max-w-[100px]">{task.assigneeName}</span>
         </div>
       </div>
+
+      <h4 className="text-lg font-black text-gray-900 dark:text-white leading-tight mb-4 group-hover:text-[#851c74] transition-colors">{task.title}</h4>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+          <span className="material-symbols-outlined text-base">near_me</span>
+          <span className="text-[11px] font-bold truncate">{territoryDisplay}</span>
+        </div>
+        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+          <span className="material-symbols-outlined text-base">account_circle</span>
+          <span className="text-[11px] font-bold">{task.assigneeName}</span>
+        </div>
+      </div>
+
+      {task.priority === 'critical' && (
+        <div className="absolute top-0 right-0 w-12 h-12 overflow-hidden">
+          <div className="absolute top-[10px] right-[-15px] bg-red-500 text-white text-[8px] font-bold py-1 px-8 rotate-45">SOS</div>
+        </div>
+      )}
     </div>
   );
 }

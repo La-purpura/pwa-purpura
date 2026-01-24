@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { useRBAC } from "@/hooks/useRBAC";
+import { HierarchicalTerritorySelector } from "@/components/common/HierarchicalTerritorySelector";
 
 export default function NewTaskPage() {
   const router = useRouter();
@@ -11,7 +12,6 @@ export default function NewTaskPage() {
   const { hasPermission } = useRBAC();
 
   const [loading, setLoading] = useState(false);
-  const [territories, setTerritories] = useState<any[]>([]);
   const [team, setTeam] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
@@ -19,29 +19,31 @@ export default function NewTaskPage() {
     description: "",
     priority: "medium",
     dueDate: new Date().toISOString().split('T')[0],
-    territoryId: "",
+    territoryIds: [] as string[],
     assigneeId: ""
   });
 
   useEffect(() => {
-    // Cargar territorios y equipo para asignación
-    Promise.all([
-      fetch('/api/territories').then(res => res.json()),
-      fetch('/api/users').then(res => res.json())
-    ]).then(([tData, uData]) => {
-      if (Array.isArray(tData)) setTerritories(tData);
-      if (Array.isArray(uData)) setTeam(uData);
+    fetch('/api/users')
+      .then(res => res.json())
+      .then(uData => {
+        if (Array.isArray(uData)) setTeam(uData);
+      })
+      .catch(console.error);
 
-      // Auto-seleccionar territorio si el usuario tiene uno fijo
-      const u = user as any;
-      if (u?.territoryId) {
-        setFormData(prev => ({ ...prev, territoryId: u.territoryId }));
-      }
-    }).catch(console.error);
+    // Auto-seleccionar territorio si el usuario tiene uno fijo (opcional, ahora es multi)
+    const u = user as any;
+    if (u?.territoryId) {
+      setFormData(prev => ({ ...prev, territoryIds: [u.territoryId] }));
+    }
   }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.territoryIds.length === 0) {
+      alert("Debes seleccionar al menos un territorio de alcance.");
+      return;
+    }
     setLoading(true);
 
     try {
@@ -84,7 +86,7 @@ export default function NewTaskPage() {
               <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Título de la Tarea</label>
               <input
                 required
-                className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-4 text-sm focus:ring-2 ring-[#851c74] transition-all"
+                className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-4 text-sm focus:ring-2 ring-[#851c74] transition-all font-bold"
                 placeholder="Ej. Relevamiento Barrio San Martín"
                 type="text"
                 value={formData.title}
@@ -92,35 +94,26 @@ export default function NewTaskPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Territorio</label>
-                <select
-                  required
-                  disabled={!!(user as any)?.territoryId && !hasPermission('territory:manage')}
-                  className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-3 text-sm focus:ring-2 ring-[#851c74] disabled:opacity-60"
-                  value={formData.territoryId}
-                  onChange={e => setFormData({ ...formData, territoryId: e.target.value })}
-                >
-                  <option value="">Seleccionar...</option>
-                  {territories.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Asignar a</label>
-                <select
-                  className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-3 text-sm focus:ring-2 ring-[#851c74]"
-                  value={formData.assigneeId}
-                  onChange={e => setFormData({ ...formData, assigneeId: e.target.value })}
-                >
-                  <option value="">Sin asignar (Global)</option>
-                  {team.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <HierarchicalTerritorySelector
+                label="Alcance Territorial"
+                selectedIds={formData.territoryIds}
+                onChange={(ids) => setFormData({ ...formData, territoryIds: ids })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Asignar a Responsable</label>
+              <select
+                className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none h-12 px-3 text-sm focus:ring-2 ring-[#851c74]"
+                value={formData.assigneeId}
+                onChange={e => setFormData({ ...formData, assigneeId: e.target.value })}
+              >
+                <option value="">Sin asignar (Global por territorio)</option>
+                {team.map(u => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -136,6 +129,7 @@ export default function NewTaskPage() {
                   <option value="low">Baja</option>
                   <option value="medium">Media</option>
                   <option value="high">Alta / Urgente</option>
+                  <option value="critical">Crítica</option>
                 </select>
               </div>
               <div>
@@ -152,8 +146,8 @@ export default function NewTaskPage() {
             <div>
               <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 ml-1">Descripción / Instrucciones</label>
               <textarea
-                className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none min-h-[100px] p-4 text-sm focus:ring-2 ring-[#851c74] resize-none"
-                placeholder="Detalla los pasos a seguir o información relevante..."
+                className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border-none min-h-[120px] p-4 text-sm focus:ring-2 ring-[#851c74] resize-none leading-relaxed"
+                placeholder="Detalla los pasos a seguir o información relevante que el responsable debe conocer..."
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
               />
@@ -162,7 +156,7 @@ export default function NewTaskPage() {
 
           <button
             disabled={loading}
-            className="w-full bg-[#851c74] hover:bg-[#6d165f] text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#851c74]/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70"
+            className="w-full bg-[#851c74] hover:bg-[#6d165f] text-white font-black py-4 rounded-2xl shadow-lg shadow-[#851c74]/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70"
             type="submit"
           >
             {loading ? (
@@ -170,13 +164,13 @@ export default function NewTaskPage() {
             ) : (
               <>
                 <span className="material-symbols-outlined">send</span>
-                CREAR TAREA
+                CREAR Y SEGMENTAR TAREA
               </>
             )}
           </button>
 
-          <p className="text-center text-[10px] text-gray-400 uppercase font-bold tracking-widest">
-            La tarea será visible inmediatamente para el asignado.
+          <p className="text-center text-[10px] text-gray-400 uppercase font-black tracking-widest">
+            La tarea será visible para todos los responsables del territorio seleccionado.
           </p>
         </form>
       </main>

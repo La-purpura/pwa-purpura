@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRBAC } from "@/hooks/useRBAC";
+import { HierarchicalTerritorySelector } from "@/components/common/HierarchicalTerritorySelector";
 
 type Alert = {
   id: string;
@@ -10,7 +11,7 @@ type Alert = {
   type: "info" | "warning" | "error" | "news";
   severity: "low" | "medium" | "high" | "critical";
   status: string;
-  territoryName: string;
+  territoryNames: string;
   createdAt: string;
   isRead: boolean;
 };
@@ -21,14 +22,13 @@ export default function AlertsHubPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"alerts" | "notifications">("alerts");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [territories, setTerritories] = useState<any[]>([]);
 
   const [newAlertData, setNewAlertData] = useState({
     title: "",
     message: "",
     type: "info",
     severity: "medium",
-    territoryId: ""
+    territoryIds: [] as string[]
   });
 
   const fetchAlerts = async () => {
@@ -46,12 +46,6 @@ export default function AlertsHubPage() {
   useEffect(() => {
     fetchAlerts();
   }, []);
-
-  useEffect(() => {
-    if (isModalOpen && hasPermission('projects:create')) {
-      fetch('/api/territories').then(res => res.json()).then(setTerritories).catch(console.error);
-    }
-  }, [isModalOpen, hasPermission]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -74,7 +68,7 @@ export default function AlertsHubPage() {
       if (res.ok) {
         fetchAlerts();
         setIsModalOpen(false);
-        setNewAlertData({ title: "", message: "", type: "info", severity: "medium", territoryId: "" });
+        setNewAlertData({ title: "", message: "", type: "info", severity: "medium", territoryIds: [] });
       }
     } catch (e) { alert("Error de conexión"); }
   };
@@ -126,7 +120,7 @@ export default function AlertsHubPage() {
                 }`}
             >
               <div className="flex gap-4">
-                <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${alert.severity === 'critical' ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${alert.severity === 'critical' || alert.severity === 'high' ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
                   }`}>
                   <span className="material-symbols-outlined">{
                     alert.type === 'error' ? 'report' : alert.type === 'warning' ? 'warning' : 'volume_up'
@@ -134,7 +128,7 @@ export default function AlertsHubPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
-                    <p className="text-[10px] font-black uppercase text-[#851c74] tracking-widest">{alert.territoryName}</p>
+                    <p className="text-[10px] font-black uppercase text-[#851c74] tracking-widest truncate max-w-[200px]">{alert.territoryNames}</p>
                     <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                   <h3 className="font-bold text-gray-900 dark:text-white mb-1 group-hover:text-[#851c74] transition-colors">{alert.title}</h3>
@@ -162,30 +156,30 @@ export default function AlertsHubPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
-          <form onSubmit={handleCreateAlert} className="relative w-full max-w-md bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] shadow-2xl p-8 overflow-hidden animate-in zoom-in-95 duration-200">
+          <form onSubmit={handleCreateAlert} className="relative w-full max-w-lg bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] shadow-2xl p-8 overflow-hidden animate-in zoom-in-95 duration-200 scroll-smooth max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
               <span className="material-symbols-outlined text-[#851c74]">broadcast_on_home</span>
-              Emitir Alerta
+              Broadcast Crítico
             </h2>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Mensaje Título</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Título de la Emergencia</label>
                 <input
                   required
                   type="text"
-                  className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none focus:ring-2 ring-[#851c74] text-sm font-bold"
-                  placeholder="Ej: Suspensión de Actividades"
+                  className="w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none focus:ring-2 ring-[#851c74] text-sm font-bold"
+                  placeholder="Ej: Inundación en Sector 3"
                   value={newAlertData.title}
                   onChange={e => setNewAlertData({ ...newAlertData, title: e.target.value })}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Severidad</label>
                   <select
-                    className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none text-xs font-bold"
+                    className="w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-xs font-bold"
                     value={newAlertData.severity}
                     onChange={e => setNewAlertData({ ...newAlertData, severity: e.target.value as any })}
                   >
@@ -195,27 +189,20 @@ export default function AlertsHubPage() {
                     <option value="critical">Crítica</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Territorio</label>
-                  <select
-                    className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none text-xs font-bold"
-                    value={newAlertData.territoryId}
-                    onChange={e => setNewAlertData({ ...newAlertData, territoryId: e.target.value })}
-                  >
-                    <option value="">Nacional (Global)</option>
-                    {territories.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
+
+                <HierarchicalTerritorySelector
+                  label="Alcance del Broadcast"
+                  selectedIds={newAlertData.territoryIds}
+                  onChange={(ids) => setNewAlertData({ ...newAlertData, territoryIds: ids })}
+                />
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Detalle Informativo</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Mensaje Directo</label>
                 <textarea
                   required
                   rows={3}
-                  className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none focus:ring-2 ring-[#851c74] text-sm resize-none"
+                  className="w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none focus:ring-2 ring-[#851c74] text-sm resize-none"
                   placeholder="Escribe el contenido de la alerta..."
                   value={newAlertData.message}
                   onChange={e => setNewAlertData({ ...newAlertData, message: e.target.value })}
@@ -225,7 +212,7 @@ export default function AlertsHubPage() {
 
             <div className="flex gap-4 mt-10">
               <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 p-4 rounded-2xl font-black text-[10px] uppercase bg-gray-100 text-gray-500">Cancelar</button>
-              <button type="submit" className="flex-1 p-4 rounded-2xl font-black text-[10px] uppercase bg-red-600 text-white shadow-xl shadow-red-900/20 active:scale-95 transition-all">EMITIR AHORA</button>
+              <button type="submit" className="flex-1 p-4 rounded-2xl font-black text-[10px] uppercase bg-red-600 text-white shadow-xl shadow-red-900/20 active:scale-95 transition-all">EMITIR BROADCAST</button>
             </div>
           </form>
         </div>

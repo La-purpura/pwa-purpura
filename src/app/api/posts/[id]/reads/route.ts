@@ -4,13 +4,16 @@ import { requirePermission, handleApiError } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
 
-// GET: Admin view for read receipts (who read the post)
+/**
+ * GET /api/posts/:id/reads
+ * Lista de usuarios que leyeron el post (Solo Admin/Coord).
+ */
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
     try {
-        const session = await requirePermission('posts:manage');
+        await requirePermission('posts:create');
         const { id } = params;
 
         const reads = await prisma.postRead.findMany({
@@ -28,7 +31,16 @@ export async function GET(
             orderBy: { readAt: 'desc' }
         });
 
-        return NextResponse.json(reads);
+        const mapped = reads.map(r => ({
+            userId: r.userId,
+            userName: r.user.name,
+            userEmail: r.user.email,
+            userRole: r.user.role,
+            territoryName: r.user.territory?.name || "N/A",
+            readAt: r.readAt
+        }));
+
+        return NextResponse.json(mapped);
     } catch (error) {
         return handleApiError(error);
     }

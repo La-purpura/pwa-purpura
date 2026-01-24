@@ -43,30 +43,55 @@ export async function requirePermission(permission: Permission) {
 /**
  * enforceScope
  * Genera un objeto de filtro para Prisma basado en el alcance territorial y de rama del usuario.
- * @param session Sesión activa
- * @param entityScope Propiedades de la entidad a considerar (territoryId, branchId)
- * @param logic 'AND' (estricto) o 'OR' (visible si coincide territorio O rama O es global)
  */
 export async function enforceScope(
     session: any,
-    options: { branch?: boolean, territory?: boolean, logic?: 'AND' | 'OR' } = { branch: true, territory: true, logic: 'AND' }
+    options: {
+        branch?: boolean,
+        territory?: boolean,
+        logic?: 'AND' | 'OR',
+        isMany?: boolean, // Si usa relación many-to-many (vía tabla secundaria)
+        relationName?: string
+    } = { branch: true, territory: true, logic: 'AND', isMany: false, relationName: 'territories' }
 ) {
     if (session.role === 'SuperAdminNacional') return {};
 
-    const { branch = true, territory = true, logic = 'AND' } = options;
+    const { branch = true, territory = true, logic = 'AND', isMany = false, relationName = 'territories' } = options;
 
-    if (logic === 'OR') {
-        const orConditions: any[] = [{ territoryId: null, branchId: null }];
-        if (territory && session.territoryId) orConditions.push({ territoryId: session.territoryId });
-        if (branch && session.branchId) orConditions.push({ branchId: session.branchId });
-        return { OR: orConditions };
+    const conditions: any[] = [];
+
+    // 1. Territorios
+    if (territory && session.territoryId) {
+        if (isMany) {
+            conditions.push({
+                OR: [
+                    { [relationName]: { none: {} } }, // Global
+                    { [relationName]: { some: { territoryId: session.territoryId } } } // Su territorio
+                ]
+            });
+        } else {
+            conditions.push({
+                OR: [
+                    { territoryId: null },
+                    { territoryId: session.territoryId }
+                ]
+            });
+        }
     }
 
-    const filters: any = {};
-    if (branch && session.branchId) filters.branchId = session.branchId;
-    if (territory && session.territoryId) filters.territoryId = session.territoryId;
+    // 2. Ramas (Single field usually)
+    if (branch && session.branchId) {
+        conditions.push({
+            OR: [
+                { branchId: null },
+                { branchId: session.branchId }
+            ]
+        });
+    }
 
-    return filters;
+    if (conditions.length === 0) return {};
+
+    return logic === 'AND' ? { AND: conditions } : { OR: conditions };
 }
 
 export function handleApiError(error: any) {
