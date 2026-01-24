@@ -1,29 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ROLE_LABELS, Role } from "@/lib/permissions";
 
+interface Branch { id: string; name: string; }
+interface Territory { id: string; name: string; type: string; }
+
 export default function InviteUserPage() {
     const router = useRouter();
-    const [step, setStep] = useState(1); // 1: Datos, 2: Roles, 3: Confirmación
+    const [step, setStep] = useState(1);
     const [generatedLink, setGeneratedLink] = useState("");
 
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [territories, setTerritories] = useState<Territory[]>([]);
+
     const [formData, setFormData] = useState({
-        name: "",
-        lastname: "",
+        firstName: "",
+        lastName: "",
         email: "",
-        phone: "",
-        dni: "",
-        role: "Referente" as Role,
-        territory: "San Isidro", // Default mock
-        branch: "Madre", // Rama principal
-        accessLevel: "SELF_ONLY",
-        expiresIn: "48h"
+        roleCode: "Referente" as Role,
+        branchId: "",
+        territoryId: "",
+        expiresHours: 48
     });
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [bRes, tRes] = await Promise.all([
+                    fetch('/api/branches'),
+                    fetch('/api/territories')
+                ]);
+                if (bRes.ok) setBranches(await bRes.json());
+                if (tRes.ok) setTerritories(await tRes.json());
+            } catch (e) { console.error("Error fetching data", e); }
+        };
+        fetchData();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,17 +48,21 @@ export default function InviteUserPage() {
         setError("");
 
         try {
+            const body = {
+                ...formData,
+                territoryScope: formData.territoryId ? { localityId: formData.territoryId } : null
+            };
+
             const res = await fetch('/api/invites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(body)
             });
 
             const data = await res.json();
-
             if (!res.ok) throw new Error(data.error || "Error al crear invitación");
 
-            setGeneratedLink(data.link);
+            setGeneratedLink(data.inviteUrl);
             setStep(3);
         } catch (err: any) {
             setError(err.message);
@@ -89,12 +110,12 @@ export default function InviteUserPage() {
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre *</label>
                                         <input required type="text" className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 ring-[#851c74]"
-                                            value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                            value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Apellido *</label>
                                         <input required type="text" className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 ring-[#851c74]"
-                                            value={formData.lastname} onChange={e => setFormData({ ...formData, lastname: e.target.value })} />
+                                            value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} />
                                     </div>
                                 </div>
                                 <div>
@@ -102,18 +123,8 @@ export default function InviteUserPage() {
                                     <input required type="email" className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 ring-[#851c74]"
                                         value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Teléfono</label>
-                                        <input type="tel" className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 ring-[#851c74]"
-                                            value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">DNI</label>
-                                        <input type="text" className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 ring-[#851c74]"
-                                            value={formData.dni} onChange={e => setFormData({ ...formData, dni: e.target.value })} />
-                                    </div>
-                                </div>
+
+                                {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
 
                                 <div className="pt-4 flex justify-end">
                                     <button type="submit" className="bg-[#851c74] text-white px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform flex items-center gap-2">
@@ -134,7 +145,7 @@ export default function InviteUserPage() {
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Rol del Sistema *</label>
                                     <select className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 ring-[#851c74]"
-                                        value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value as Role })}>
+                                        value={formData.roleCode} onChange={e => setFormData({ ...formData, roleCode: e.target.value as Role })}>
                                         {Object.entries(ROLE_LABELS).map(([key, label]) => (
                                             <option key={key} value={key}>{label}</option>
                                         ))}
@@ -143,48 +154,51 @@ export default function InviteUserPage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Rama Principal *</label>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Rama Principal</label>
                                         <select className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 ring-[#851c74]"
-                                            value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value })}>
-                                            <option value="Madre">Madre</option>
-                                            <option value="Juventud">Juventud</option>
-                                            <option value="Profesionales">Profesionales</option>
+                                            value={formData.branchId} onChange={e => setFormData({ ...formData, branchId: e.target.value })}>
+                                            <option value="">Nacional / Sin rama</option>
+                                            {branches.map(b => (
+                                                <option key={b.id} value={b.id}>{b.name}</option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Expiración Link</label>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Territorio</label>
                                         <select className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 ring-[#851c74]"
-                                            value={formData.expiresIn} onChange={e => setFormData({ ...formData, expiresIn: e.target.value })}>
-                                            <option value="24h">24 Horas</option>
-                                            <option value="48h">48 Horas</option>
-                                            <option value="7d">7 Días</option>
+                                            value={formData.territoryId} onChange={e => setFormData({ ...formData, territoryId: e.target.value })}>
+                                            <option value="">Nacional</option>
+                                            {territories.map(t => (
+                                                <option key={t.id} value={t.id}>{t.name} ({t.type})</option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nivel de Acceso</label>
-                                    <div className="flex gap-2">
-                                        {['SELF_ONLY', 'CHILDREN', 'FULL'].map(level => (
-                                            <button key={level} type="button"
-                                                onClick={() => setFormData({ ...formData, accessLevel: level })}
-                                                className={`flex-1 p-2 rounded-lg text-xs font-bold border transition-colors ${formData.accessLevel === level
-                                                    ? 'bg-[#851c74]/10 border-[#851c74] text-[#851c74]'
-                                                    : 'border-gray-200 dark:border-gray-700 text-gray-500'
-                                                    }`}>
-                                                {level}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Expiración Link</label>
+                                    <select className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 ring-[#851c74]"
+                                        value={formData.expiresHours} onChange={e => setFormData({ ...formData, expiresHours: parseInt(e.target.value) })}>
+                                        <option value={24}>24 Horas</option>
+                                        <option value={48}>48 Horas</option>
+                                        <option value={168}>7 Días</option>
+                                        <option value={720}>30 Días</option>
+                                    </select>
                                 </div>
+
+                                {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
 
                                 <div className="pt-6 flex justify-between">
                                     <button type="button" onClick={() => setStep(1)} className="text-gray-500 font-bold px-4">
                                         Volver
                                     </button>
-                                    <button type="submit" className="bg-[#851c74] text-white px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform flex items-center gap-2 shadow-lg shadow-[#851c74]/20">
-                                        <span className="material-symbols-outlined">send</span>
-                                        Crear Invitación
+                                    <button type="submit" disabled={loading} className="bg-[#851c74] text-white px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform flex items-center gap-2 shadow-lg shadow-[#851c74]/20 disabled:opacity-50">
+                                        {loading ? "Creando..." : (
+                                            <>
+                                                <span className="material-symbols-outlined">send</span>
+                                                Crear Invitación
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -196,8 +210,8 @@ export default function InviteUserPage() {
                     <div className="w-16 h-16 bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-300 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span className="material-symbols-outlined text-3xl">check</span>
                     </div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">¡Usuario Invitado!</h2>
-                    <p className="text-gray-600 dark:text-gray-300 mb-6">Hemos generado un enlace de activación único para <strong>{formData.name}</strong>.</p>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">¡Invitación Lista!</h2>
+                    <p className="text-gray-600 dark:text-gray-300 mb-6">Hemos generado un enlace de activación único para <strong>{formData.firstName} {formData.lastName}</strong>.</p>
 
                     <div className="bg-white dark:bg-black p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center gap-3 mb-6 overflow-hidden">
                         <span className="material-symbols-outlined text-gray-400">link</span>
@@ -207,8 +221,8 @@ export default function InviteUserPage() {
 
                     <div className="flex justify-center gap-4">
                         <button onClick={() => { setStep(1); setGeneratedLink(""); }} className="text-gray-500 font-bold text-sm">Invitar otro</button>
-                        <button onClick={() => window.open(generatedLink, '_blank')} className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition-colors flex items-center gap-2">
-                            Simular Activación
+                        <button onClick={() => window.open(generatedLink, '_blank')} className="bg-[#851c74] text-white px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90 transition-colors flex items-center gap-2">
+                            Ir a Activación
                             <span className="material-symbols-outlined text-sm">open_in_new</span>
                         </button>
                     </div>

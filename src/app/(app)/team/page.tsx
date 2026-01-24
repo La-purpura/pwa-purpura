@@ -18,9 +18,9 @@ type Invitation = {
   id: string;
   email: string;
   role: string;
-  token: string;
-  status: string;
   expiresAt: string;
+  usedAt: string | null;
+  revokedAt: string | null;
   createdAt: string;
 };
 
@@ -55,21 +55,15 @@ export default function TeamPage() {
   const handleRevoke = async (id: string) => {
     if (!confirm("¿Estás seguro de que deseas revocar esta invitación?")) return;
     try {
-      const res = await fetch(`/api/invites?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/invites/${id}/revoke`, { method: "POST" });
       if (res.ok) {
-        setInvitations(invitations.filter(i => i.id !== id));
+        setInvitations(invitations.map(i => i.id === id ? { ...i, revokedAt: new Date().toISOString() } : i));
+        alert("Invitación revocada");
       } else {
-        alert("Error al revocar");
+        const data = await res.json();
+        alert(data.error || "Error al revocar");
       }
     } catch (e) { alert("Error de conexión"); }
-  };
-
-  const copyInviteLink = (invite: Invitation) => {
-    const protocol = window.location.protocol;
-    const host = window.location.host;
-    const link = `${protocol}//${host}/auth/activate?token=${invite.token}&email=${encodeURIComponent(invite.email)}`;
-    navigator.clipboard.writeText(link);
-    alert("Enlace copiado al portapapeles. ¡Ya puedes pegarlo en WhatsApp!");
   };
 
   const filteredUsers = users.filter(u =>
@@ -187,21 +181,27 @@ export default function TeamPage() {
                   <h3 className="font-bold text-gray-800 dark:text-white text-base truncate mb-1">{invite.email}</h3>
                   <p className="text-[#851c74] text-xs font-bold uppercase tracking-wide mb-6">{invite.role}</p>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => copyInviteLink(invite)}
-                      className="flex-1 bg-green-50 dark:bg-green-900/10 hover:bg-green-100 text-green-600 dark:text-green-400 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-sm">link</span>
-                      WhatsApp
-                    </button>
-                    <button
-                      onClick={() => handleRevoke(invite.id)}
-                      className="bg-red-50 dark:bg-red-900/10 hover:bg-red-100 text-red-600 dark:text-red-400 p-2 rounded-xl transition-colors"
-                      title="Revocar invitación"
-                    >
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                    </button>
+                  <div className="flex flex-col gap-2">
+                    {!invite.revokedAt && !invite.usedAt && (
+                      <button
+                        onClick={() => handleRevoke(invite.id)}
+                        className="w-full bg-red-50 dark:bg-red-900/10 hover:bg-red-100 text-red-600 dark:text-red-400 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-colors"
+                        title="Revocar invitación"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                        Revocar Enlace
+                      </button>
+                    )}
+                    {invite.revokedAt && (
+                      <span className="text-[10px] text-red-500 font-bold uppercase text-center py-2 bg-red-50 dark:bg-red-900/10 rounded-xl">
+                        Revocada
+                      </span>
+                    )}
+                    {invite.usedAt && (
+                      <span className="text-[10px] text-green-500 font-bold uppercase text-center py-2 bg-green-50 dark:bg-green-900/10 rounded-xl">
+                        Utilizada
+                      </span>
+                    )}
                   </div>
                 </div>
               )) : (

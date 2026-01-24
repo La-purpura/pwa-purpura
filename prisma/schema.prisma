@@ -242,6 +242,8 @@ model AuditLog {
 model Invitation {
   id             String    @id @default(cuid())
   email          String
+  firstName      String?
+  lastName       String?
   tokenHash      String    @unique
   role           String
   branchId       String?
