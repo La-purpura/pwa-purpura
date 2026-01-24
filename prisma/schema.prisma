@@ -12,6 +12,7 @@ model Territory {
   name               String
   type               String
   parentId           String?
+  alerts             Alert[]
   incidents          Incident[]
   posts              Post[]
   projectTerritories ProjectTerritory[]
@@ -54,6 +55,7 @@ model User {
   authoredResources Resource[]   @relation("AuthoredResources")
   sessions          Session[]
   assignedTasks     Task[]
+  readAlerts        AlertRead[]
   branch            Branch?      @relation(fields: [branchId], references: [id])
   territory         Territory?   @relation(fields: [territoryId], references: [id])
 }
@@ -89,12 +91,31 @@ model Task {
 }
 
 model Alert {
-  id        String   @id @default(cuid())
-  title     String
-  type      String
-  message   String
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id          String      @id @default(cuid())
+  title       String
+  message     String
+  type        String      @default("info")
+  severity    String      @default("medium")
+  status      String      @default("active")
+  territoryId String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  territory   Territory?  @relation(fields: [territoryId], references: [id])
+  reads       AlertRead[]
+
+  @@index([status])
+  @@index([severity])
+  @@index([territoryId])
+}
+
+model AlertRead {
+  alertId String
+  userId  String
+  readAt  DateTime @default(now())
+  alert   Alert    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([alertId, userId])
 }
 
 model Project {

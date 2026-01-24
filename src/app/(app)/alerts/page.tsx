@@ -1,40 +1,66 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useAppStore } from "@/lib/store";
 import { useRBAC } from "@/hooks/useRBAC";
 
-const alertIcons = {
-  system: { icon: "emergency_home", color: "text-primary", bg: "bg-primary/10" },
-  security: { icon: "priority_high", color: "text-amber-600", bg: "bg-amber-100" },
-  news: { icon: "alternate_email", color: "text-blue-600", bg: "bg-blue-100" },
-  info: { icon: "info", color: "text-blue-500", bg: "bg-blue-50" },
-  warning: { icon: "warning", color: "text-orange-500", bg: "bg-orange-50" },
-  error: { icon: "report", color: "text-red-500", bg: "bg-red-50" },
-} as const;
+type Alert = {
+  id: string;
+  title: string;
+  message: string;
+  type: "info" | "warning" | "error" | "news";
+  severity: "low" | "medium" | "high" | "critical";
+  status: string;
+  territoryName: string;
+  createdAt: string;
+  isRead: boolean;
+};
 
 export default function AlertsHubPage() {
-  const { alerts, setAlerts, markAlertAsRead, addAlert } = useAppStore();
-  const { hasPermission } = useRBAC();
-
+  const { hasPermission, user } = useRBAC();
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"alerts" | "notifications">("alerts");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [territories, setTerritories] = useState<any[]>([]);
+
   const [newAlertData, setNewAlertData] = useState({
     title: "",
-    type: "info" as "info" | "warning" | "error" | "news",
-    message: ""
+    message: "",
+    type: "info",
+    severity: "medium",
+    territoryId: ""
   });
 
-  // Fetch alerts from API
+  const fetchAlerts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/alerts');
+      if (res.ok) {
+        const data = await res.json();
+        setAlerts(data);
+      }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
   useEffect(() => {
-    fetch('/api/alerts')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setAlerts(data);
-      })
-      .catch(err => console.error("Error loading alerts:", err));
-  }, [setAlerts]);
+    fetchAlerts();
+  }, []);
+
+  useEffect(() => {
+    if (isModalOpen && hasPermission('projects:create')) {
+      fetch('/api/territories').then(res => res.json()).then(setTerritories).catch(console.error);
+    }
+  }, [isModalOpen, hasPermission]);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      const res = await fetch(`/api/alerts/${id}/read`, { method: "POST" });
+      if (res.ok) {
+        setAlerts(alerts.map(a => a.id === id ? { ...a, isRead: true } : a));
+      }
+    } catch (e) { console.error(e); }
+  };
 
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,184 +68,168 @@ export default function AlertsHubPage() {
       const res = await fetch('/api/alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newAlertData.title,
-          type: newAlertData.type,
-          message: newAlertData.message
-        })
+        body: JSON.stringify(newAlertData)
       });
 
       if (res.ok) {
-        const newAlert = await res.json();
-        addAlert(newAlert);
+        fetchAlerts();
         setIsModalOpen(false);
-        setNewAlertData({ title: "", type: "info", message: "" });
-        alert("Alerta creada con éxito");
-      } else {
-        alert("Error al crear alerta: Verifica tus permisos");
+        setNewAlertData({ title: "", message: "", type: "info", severity: "medium", territoryId: "" });
       }
-    } catch (error) {
-      console.error("Error creating alert:", error);
-      alert("Error de conexión");
-    }
-  };
-
-  const handleMarkAllRead = () => {
-    alerts.forEach((alert) => markAlertAsRead(alert.id));
+    } catch (e) { alert("Error de conexión"); }
   };
 
   const filteredAlerts = alerts.filter(a => {
-    if (activeTab === "alerts") return a.type === "warning" || a.type === "error" || a.type === "security";
+    if (activeTab === "alerts") return a.severity === "high" || a.severity === "critical";
     return true;
   });
 
   return (
-    <main className="pb-24">
-      <div className="px-4 py-4 bg-white dark:bg-background-dark">
-        <div className="flex h-12 flex-1 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
+    <main className="pb-24 min-h-screen bg-gray-50 dark:bg-black">
+      <div className="px-4 py-6 bg-white dark:bg-[#1a1a1a] border-b border-gray-100 dark:border-gray-800">
+        <div className="flex h-12 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 p-1 max-w-sm mx-auto">
           <button
             onClick={() => setActiveTab("alerts")}
-            className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 transition-all text-sm font-semibold ${activeTab === 'alerts' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' : 'text-[#85667f] dark:text-gray-400'}`}
+            className={`flex-1 h-full rounded-xl transition-all text-xs font-black uppercase tracking-widest ${activeTab === 'alerts' ? 'bg-white dark:bg-gray-700 shadow-sm text-[#851c74]' : 'text-gray-400'}`}
           >
-            <span className="truncate">Alertas Críticas</span>
+            Críticas
           </button>
           <button
             onClick={() => setActiveTab("notifications")}
-            className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 transition-all text-sm font-semibold ${activeTab === 'notifications' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' : 'text-[#85667f] dark:text-gray-400'}`}
+            className={`flex-1 h-full rounded-xl transition-all text-xs font-black uppercase tracking-widest ${activeTab === 'notifications' ? 'bg-white dark:bg-gray-700 shadow-sm text-[#851c74]' : 'text-gray-400'}`}
           >
-            <span className="truncate">Novedades</span>
+            Todas
           </button>
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <h3 className="text-[#171216] dark:text-white text-base font-bold tracking-tight">
-          {activeTab === "alerts" ? "En Tiempo Real" : "Historial"}
-        </h3>
-        {activeTab === "alerts" && (
-          <span className="bg-red-500/10 text-red-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
-            LIVE
-          </span>
-        )}
-      </div>
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-bold dark:text-white">Centro de Alertas</h2>
+          {activeTab === 'alerts' && (
+            <span className="flex items-center gap-1.5 text-[10px] font-black text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full animate-pulse">
+              <span className="size-1.5 bg-red-500 rounded-full"></span> VIVO
+            </span>
+          )}
+        </div>
 
-      <div className="px-4 space-y-3">
-        {filteredAlerts.length > 0 ? (
-          filteredAlerts.map((alert) => (
-            <button
-              key={alert.id}
-              onClick={() => markAlertAsRead(alert.id)}
-              className={`w-full text-left flex gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm items-start active:scale-[0.98] transition-transform ${alert.isRead ? "opacity-60 grayscale-[0.5]" : ""}`}
-            >
-              <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${alert.type === 'error' ? 'bg-red-100 text-red-600' :
-                  alert.type === 'warning' ? 'bg-amber-100 text-amber-600' :
-                    'bg-blue-100 text-blue-600'
-                }`}>
-                <span className="material-symbols-outlined text-[20px]">
-                  {alert.type === 'error' ? 'report' : alert.type === 'warning' ? 'priority_high' : 'info'}
-                </span>
-              </div>
-              <div className="flex flex-col gap-0.5 w-full">
-                <div className="flex justify-between w-full">
-                  <p className="text-sm font-bold text-[#171216] dark:text-white">{alert.title}</p>
-                  <span className="text-[10px] text-gray-400">
-                    {alert.createdAt ? new Date(alert.createdAt).toLocaleDateString() : "Ahora"}
-                  </span>
-                </div>
-                {alert.message && <p className="text-xs text-gray-600 dark:text-gray-300">{alert.message}</p>}
-
-                {alert.isRead && <span className="text-[10px] text-gray-400 text-right mt-1">Leído</span>}
-              </div>
-            </button>
-          ))
+        {loading ? (
+          <div className="py-20 text-center text-gray-400 animate-pulse font-bold">Sincronizando canal oficial...</div>
+        ) : filteredAlerts.length === 0 ? (
+          <div className="py-20 text-center text-gray-400 italic">No hay alertas en esta categoría.</div>
         ) : (
-          <div className="text-center text-sm text-gray-400 py-10 font-medium">
-            No hay alertas activas
-          </div>
+          filteredAlerts.map(alert => (
+            <div
+              key={alert.id}
+              onClick={() => !alert.isRead && handleMarkAsRead(alert.id)}
+              className={`group relative bg-white dark:bg-[#1a1a1a] p-5 rounded-3xl border transition-all cursor-pointer ${alert.isRead ? 'opacity-60 border-transparent shadow-none' : 'border-[#851c74]/10 shadow-lg shadow-purple-900/5'
+                }`}
+            >
+              <div className="flex gap-4">
+                <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${alert.severity === 'critical' ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                  }`}>
+                  <span className="material-symbols-outlined">{
+                    alert.type === 'error' ? 'report' : alert.type === 'warning' ? 'warning' : 'volume_up'
+                  }</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-[10px] font-black uppercase text-[#851c74] tracking-widest">{alert.territoryName}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+                  <h3 className="font-bold text-gray-900 dark:text-white mb-1 group-hover:text-[#851c74] transition-colors">{alert.title}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{alert.message}</p>
+                </div>
+              </div>
+
+              {!alert.isRead && (
+                <div className="absolute top-2 right-2 size-2 bg-[#851c74] rounded-full"></div>
+              )}
+            </div>
+          ))
         )}
       </div>
 
-      {hasPermission('incidents:create') && (
+      {hasPermission('posts:create') && (
         <button
           onClick={() => setIsModalOpen(true)}
-          className="fixed bottom-24 right-4 bg-[#851c74] text-white p-4 rounded-full shadow-lg shadow-[#851c74]/40 z-30 transition-transform active:scale-90 hover:scale-105 flex items-center gap-2 pr-6"
+          className="fixed bottom-24 right-4 bg-[#851c74] text-white size-14 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group"
         >
-          <span className="material-symbols-outlined text-2xl">add_alert</span>
-          <span className="font-bold">Nueva Alerta</span>
+          <span className="material-symbols-outlined text-2xl group-hover:rotate-12">add_alert</span>
         </button>
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
-          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-[#851c74] p-4 flex justify-between items-center text-white">
-              <h3 className="font-bold flex items-center gap-2">
-                <span className="material-symbols-outlined">edit_notifications</span>
-                Nueva Alerta
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="hover:bg-white/20 rounded-full p-1 transition-colors">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
+          <form onSubmit={handleCreateAlert} className="relative w-full max-w-md bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] shadow-2xl p-8 overflow-hidden animate-in zoom-in-95 duration-200">
+            <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
+              <span className="material-symbols-outlined text-[#851c74]">broadcast_on_home</span>
+              Emitir Alerta
+            </h2>
 
-            <form onSubmit={handleCreateAlert} className="p-5 space-y-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Título</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Mensaje Título</label>
                 <input
                   required
                   type="text"
-                  placeholder="Ej: Conflicto en Zona Norte"
-                  className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74]"
+                  className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none focus:ring-2 ring-[#851c74] text-sm font-bold"
+                  placeholder="Ej: Suspensión de Actividades"
                   value={newAlertData.title}
-                  onChange={(e) => setNewAlertData({ ...newAlertData, title: e.target.value })}
+                  onChange={e => setNewAlertData({ ...newAlertData, title: e.target.value })}
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Prioridad / Tipo</label>
-                <select
-                  className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74]"
-                  value={newAlertData.type}
-                  onChange={(e) => setNewAlertData({ ...newAlertData, type: e.target.value as any })}
-                >
-                  <option value="info">Informativa</option>
-                  <option value="warning">Advertencia (Media)</option>
-                  <option value="error">Crítica (Alta)</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Severidad</label>
+                  <select
+                    className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none text-xs font-bold"
+                    value={newAlertData.severity}
+                    onChange={e => setNewAlertData({ ...newAlertData, severity: e.target.value as any })}
+                  >
+                    <option value="low">Baja</option>
+                    <option value="medium">Media</option>
+                    <option value="high">Alta</option>
+                    <option value="critical">Crítica</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Territorio</label>
+                  <select
+                    className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none text-xs font-bold"
+                    value={newAlertData.territoryId}
+                    onChange={e => setNewAlertData({ ...newAlertData, territoryId: e.target.value })}
+                  >
+                    <option value="">Nacional (Global)</option>
+                    {territories.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Detalle</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Detalle Informativo</label>
                 <textarea
+                  required
                   rows={3}
-                  placeholder="Describa la situación..."
-                  className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-[#851c74]"
+                  className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none focus:ring-2 ring-[#851c74] text-sm resize-none"
+                  placeholder="Escribe el contenido de la alerta..."
                   value={newAlertData.message}
-                  onChange={(e) => setNewAlertData({ ...newAlertData, message: e.target.value })}
+                  onChange={e => setNewAlertData({ ...newAlertData, message: e.target.value })}
                 />
               </div>
+            </div>
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full bg-[#851c74] text-white font-bold py-3 rounded-xl shadow-lg shadow-purple-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
-                >
-                  <span>Emitir Alerta</span>
-                  <span className="material-symbols-outlined">send</span>
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="flex gap-4 mt-10">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 p-4 rounded-2xl font-black text-[10px] uppercase bg-gray-100 text-gray-500">Cancelar</button>
+              <button type="submit" className="flex-1 p-4 rounded-2xl font-black text-[10px] uppercase bg-red-600 text-white shadow-xl shadow-red-900/20 active:scale-95 transition-all">EMITIR AHORA</button>
+            </div>
+          </form>
         </div>
       )}
-
-      <div className="mt-8 px-4 text-center">
-        <div className="inline-flex items-center gap-2 text-gray-400 dark:text-gray-500 opacity-50">
-          <span className="material-symbols-outlined text-sm">verified_user</span>
-          <span className="text-[10px] font-black tracking-widest uppercase">Canal Oficial Seguro</span>
-        </div>
-      </div>
     </main>
   );
 }
