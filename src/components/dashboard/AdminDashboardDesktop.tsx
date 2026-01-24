@@ -25,40 +25,31 @@ export default function AdminDashboardDesktop() {
     const territoryFilter = useAppStore((state) => state.territoryFilter);
     const territoryLabel = territoryFilter.section ? "Territorio Filtrado" : "Vista Global";
 
-    // Stats State
-    const [stats, setStats] = useState({
-        activeAlerts: 0,
-        totalTasks: 0,
-        pendingTasks: 0,
-        totalUsers: 0
-    });
-
+    // Summary State
+    const [summary, setSummary] = useState<any>(null);
     const [requests, setRequests] = useState<RequestView[]>([]);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<RequestView | null>(null);
     const [modalMode, setModalMode] = useState<"approve" | "manage">("approve");
 
-    // Fetch Data
-    useEffect(() => {
-        // 1. Stats
-        fetch('/api/reports/stats')
-            .then(res => res.json())
-            .then(data => { if (data.totalTasks !== undefined) setStats(data); })
-            .catch(console.error);
-
-        // 2. Requests
-        fetchRequests();
-    }, []);
+    const fetchSummary = async () => {
+        try {
+            const res = await fetch('/api/dashboard/summary');
+            if (res.ok) {
+                const data = await res.json();
+                setSummary(data);
+            }
+        } catch (error) { console.error(error); }
+    };
 
     const fetchRequests = async () => {
         try {
             const res = await fetch('/api/requests');
             if (res.ok) {
                 const data: any[] = await res.json();
-                // Adapter
                 const viewData: any[] = data.filter(r => r.status === 'pending').map(r => ({
                     ...r,
-                    responsible: 'Usuario Móvil',
+                    responsible: r.userName || 'Usuario Móvil',
                     initials: 'UM',
                     color: "purple",
                     statusColor: 'yellow'
@@ -68,29 +59,17 @@ export default function AdminDashboardDesktop() {
         } catch (error) { console.error(error); }
     };
 
-    // Modal Handlers
-    const openApproveModal = (req: RequestView) => {
-        setSelectedRequest(req);
-        setModalMode("approve");
-        setModalOpen(true);
-    };
-
-    const openManageModal = (req: RequestView) => {
-        setSelectedRequest(req);
-        setModalMode("manage");
-        setModalOpen(true);
-    };
+    useEffect(() => {
+        fetchSummary();
+        fetchRequests();
+    }, []);
 
     const confirmApprove = async (id: string) => {
-        const res = await fetch(`/api/requests/${id}/approve`, {
-            method: 'POST'
-        });
+        const res = await fetch(`/api/requests/${id}/approve`, { method: 'POST' });
         if (res.ok) {
-            await fetchRequests();
+            fetchRequests();
+            fetchSummary();
             setModalOpen(false);
-            alert("Solicitud aprobada");
-        } else {
-            alert("Error al aprobar");
         }
     };
 
@@ -101,27 +80,13 @@ export default function AdminDashboardDesktop() {
             body: JSON.stringify({ feedback: reason })
         });
         if (res.ok) {
-            await fetchRequests();
+            fetchRequests();
             setModalOpen(false);
-            alert("Solicitud rechazada");
-        } else {
-            alert("Error al rechazar");
         }
     };
 
-    const updateStatus = async (id: string, newStatus: string) => {
-        // En un dashboard real, este 'updateStatus' podría ser un PATCH directo si es un cambio genérico
-        await fetch(`/api/requests/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus === 'Urgente' ? 'pending' : 'pending' }) // Placeholder logic
-        });
-        await fetchRequests();
-        setModalOpen(false);
-    };
-
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in duration-500">
             <RequestModal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
@@ -129,121 +94,103 @@ export default function AdminDashboardDesktop() {
                 mode={modalMode}
                 onApprove={confirmApprove}
                 onReject={confirmReject}
-                onUpdateStatus={updateStatus}
+                onUpdateStatus={() => { }}
             />
 
-            {/* KPIs */}
-            <section className="bg-white dark:bg-[#20121d] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between mb-4">
+            {/* KPIs Reales */}
+            <section className="bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] p-8 shadow-sm border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white">Resumen Operativo</h3>
-                        <p className="text-sm text-[#851c74] font-medium">{territoryLabel}</p>
+                        <h3 className="text-xl font-black text-gray-900 dark:text-white">Panel de Control Real</h3>
+                        <p className="text-[10px] font-black uppercase text-[#851c74] tracking-[0.2em]">{territoryLabel}</p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Link href="/alerts" className="block p-4 rounded-xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800 transition-hover hover:shadow-md min-w-0 group cursor-pointer hover:bg-purple-100/50">
-                        <div className="flex flex-col h-full justify-between">
-                            <p className="text-xs text-gray-500 font-bold uppercase mb-1 truncate group-hover:text-[#851c74] transition-colors">Alertas Activas</p>
-                            <div>
-                                <p className="text-3xl font-extrabold text-[#851c74] group-hover:scale-105 transition-transform origin-left">
-                                    {stats.activeAlerts}
-                                </p>
-                                <span className="text-xs font-medium text-gray-500 mt-2 block">Monitoreo activo</span>
-                            </div>
-                        </div>
-                    </Link>
-
-                    <Link href="/tasks" className="block p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 transition-hover hover:shadow-md min-w-0 group cursor-pointer hover:bg-blue-100/50">
-                        <div className="flex flex-col h-full justify-between">
-                            <p className="text-xs text-gray-500 font-bold uppercase mb-1 truncate group-hover:text-blue-700 transition-colors">Tareas Totales</p>
-                            <div>
-                                <p className="text-3xl font-extrabold text-blue-600 group-hover:scale-105 transition-transform origin-left">
-                                    {stats.totalTasks}
-                                </p>
-                                <span className="text-xs font-medium text-blue-500 mt-2 block">
-                                    {stats.pendingTasks} pendientes
-                                </span>
-                            </div>
-                        </div>
-                    </Link>
-
-                    <Link href="/team" className="block p-4 rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800 transition-hover hover:shadow-md min-w-0 group cursor-pointer hover:bg-orange-100/50">
-                        <div className="flex flex-col h-full justify-between">
-                            <p className="text-xs text-gray-500 font-bold uppercase mb-1 truncate group-hover:text-orange-700 transition-colors">Usuarios</p>
-                            <div>
-                                <p className="text-3xl font-extrabold text-orange-600 group-hover:scale-105 transition-transform origin-left">
-                                    {stats.totalUsers}
-                                </p>
-                                <span className="text-xs font-medium text-gray-500 mt-2 block">Registrados</span>
-                            </div>
-                        </div>
-                    </Link>
-
-                    <Link href="/projects" className="block p-4 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-800 transition-hover hover:shadow-md min-w-0 group cursor-pointer hover:bg-green-100/50">
-                        <div className="flex flex-col h-full justify-between">
-                            <p className="text-xs text-gray-500 font-bold uppercase mb-1 truncate group-hover:text-green-700 transition-colors">Proyectos</p>
-                            <div>
-                                <p className="text-3xl font-extrabold text-green-600 group-hover:scale-105 transition-transform origin-left">
-                                    -
-                                </p>
-                                <span className="text-xs font-medium text-gray-500 mt-2 block">En desarrollo</span>
-                            </div>
-                        </div>
-                    </Link>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <KPIComponent
+                        href="/alerts"
+                        label="Alertas Activas"
+                        value={summary?.alerts?.active}
+                        subLabel="Requieren atención"
+                        color="purple"
+                    />
+                    <KPIComponent
+                        href="/tasks"
+                        label="Tareas Pendientes"
+                        value={summary?.tasks?.pending}
+                        subLabel={`De ${summary?.tasks?.total || 0} totales`}
+                        color="blue"
+                    />
+                    <KPIComponent
+                        href="/team"
+                        label="Agentes Activos"
+                        value={summary?.users?.active}
+                        subLabel="En territorio"
+                        color="orange"
+                    />
+                    <KPIComponent
+                        href="/projects"
+                        label="Proyectos"
+                        value={summary?.projects?.total}
+                        subLabel="En ejecución"
+                        color="green"
+                    />
                 </div>
             </section>
 
-            {/* Gráficos y Comunicados */}
+            {/* Analytics y Feed */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 <div className="xl:col-span-2">
                     <DashboardAnalytics />
                 </div>
-                <div>
+                <div className="space-y-6">
                     <AnnouncementFeed />
+                    {summary?.requests?.pending > 0 && (
+                        <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 p-6 rounded-[2rem]">
+                            <h4 className="font-black text-amber-700 dark:text-amber-500 text-xs uppercase mb-2">Solicitudes Pendientes</h4>
+                            <p className="text-2xl font-black text-amber-800 dark:text-amber-400">{summary.requests.pending}</p>
+                            <Link href="/requests" className="mt-4 block text-[10px] font-black uppercase text-amber-700 bg-white shadow-sm py-2 text-center rounded-xl">Gestionar Ahora</Link>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Accesos Directos */}
-            <section>
-                <div className="flex items-center gap-2 mb-4 px-1">
-                    <span className="material-symbols-outlined text-[#851c74]">grid_view</span>
-                    <h3 className="font-bold text-lg text-gray-800 dark:text-white">Centro de Gestión</h3>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {hasPermission("incidents:create") && (
-                        <Link href="/alerts" className="p-4 bg-white dark:bg-[#20121d] border border-gray-100 dark:border-gray-800 rounded-xl hover:shadow-md hover:border-[#851c74]/30 transition-all flex flex-col gap-2 group">
-                            <span className="material-symbols-outlined text-orange-600 group-hover:scale-110 transition-transform">notification_add</span>
-                            <span className="font-bold text-sm">Alertas</span>
-                        </Link>
-                    )}
-                    {hasPermission("users:invite") && (
-                        <Link href="/team" className="p-4 bg-white dark:bg-[#20121d] border border-gray-100 dark:border-gray-800 rounded-xl hover:shadow-md hover:border-[#851c74]/30 transition-all flex flex-col gap-2 group">
-                            <span className="material-symbols-outlined text-blue-600 group-hover:scale-110 transition-transform">person_add</span>
-                            <span className="font-bold text-sm">Invitar Usuario</span>
-                        </Link>
-                    )}
-                    {hasPermission("forms:create") && (
-                        <Link href="/new-task" className="p-4 bg-white dark:bg-[#20121d] border border-gray-100 dark:border-gray-800 rounded-xl hover:shadow-md hover:border-[#851c74]/30 transition-all flex flex-col gap-2 group">
-                            <span className="material-symbols-outlined text-green-600 group-hover:scale-110 transition-transform">add_task</span>
-                            <span className="font-bold text-sm">Nueva Tarea</span>
-                        </Link>
-                    )}
+            {/* Accesos Rápidos */}
+            <section className="space-y-4">
+                <h3 className="font-black text-xs uppercase text-gray-400 tracking-widest ml-2">Accesos Directos</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <QuickAccess icon="record_voice_over" label="Difundir Alerta" href="/alerts" color="text-red-500" />
+                    <QuickAccess icon="person_add" label="Alta Voluntario" href="/team" color="text-blue-500" />
+                    <QuickAccess icon="add_task" label="Asignar Tarea" href="/new-task" color="text-green-500" />
+                    <QuickAccess icon="cloud_upload" label="Biblioteca" href="/library" color="text-purple-500" />
                 </div>
             </section>
-
-            {/* Tabla de Requests (Solo visible si hay requests) */}
-            {requests.length > 0 && hasPermission("forms:review") && (
-                <section className="bg-white dark:bg-[#20121d] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-                        <h3 className="font-bold">Solicitudes Recientes</h3>
-                    </div>
-                    <div className="p-6">
-                        <p className="text-gray-500">Listado de solicitudes pendientes de aprobación...</p>
-                        {/* Tabla simplificada por brevedad en M7 */}
-                    </div>
-                </section>
-            )}
         </div>
+    );
+}
+
+function KPIComponent({ href, label, value, subLabel, color }: any) {
+    const colors = {
+        purple: "bg-purple-50 border-purple-100 text-purple-700 dark:bg-purple-900/10 dark:border-purple-800",
+        blue: "bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/10 dark:border-blue-800",
+        orange: "bg-orange-50 border-orange-100 text-orange-700 dark:bg-orange-900/10 dark:border-orange-800",
+        green: "bg-green-50 border-green-100 text-green-700 dark:bg-green-900/10 dark:border-green-800",
+    } as any;
+
+    return (
+        <Link href={href} className={`block p-6 rounded-3xl border transition-all hover:shadow-lg active:scale-95 ${colors[color]}`}>
+            <p className="text-[10px] font-black uppercase opacity-60 mb-2 truncate">{label}</p>
+            <p className="text-4xl font-black mb-1">{value ?? '...'}</p>
+            <p className="text-[10px] font-bold opacity-60">{subLabel}</p>
+        </Link>
+    );
+}
+
+function QuickAccess({ icon, label, href, color }: any) {
+    return (
+        <Link href={href} className="bg-white dark:bg-[#1a1a1a] p-6 rounded-3xl border border-gray-50 dark:border-gray-800 flex flex-col items-center gap-3 hover:border-[#851c74]/30 hover:shadow-md transition-all group">
+            <span className={`material-symbols-outlined text-3xl group-hover:scale-110 transition-transform ${color}`}>{icon}</span>
+            <span className="text-[10px] font-black uppercase text-center tracking-widest">{label}</span>
+        </Link>
     );
 }

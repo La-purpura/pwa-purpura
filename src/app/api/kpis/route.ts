@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { mockKpis } from "@/lib/mocks";
 
-export const dynamic = 'force-dynamic';
-
-export async function GET() {
-  return NextResponse.json(mockKpis);
+/**
+ * DEPRECATED: Use /api/dashboard/summary instead.
+ * Proxying for backward compatibility.
+ */
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  url.pathname = '/api/dashboard/summary';
+  return NextResponse.redirect(url);
 }

@@ -1,5 +1,7 @@
-import Link from "next/link";
+"use client";
+
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
 import { CriticalIncidents } from "@/components/dashboard/CriticalIncidents";
 import { DashboardAnalytics } from "@/components/dashboard/DashboardAnalytics";
@@ -7,130 +9,145 @@ import { useRBAC } from "@/hooks/useRBAC";
 
 export default function AdminDashboardMobile() {
     const { hasPermission } = useRBAC();
-
-    // Stats State
-    const [stats, setStats] = useState({
-        activeAlerts: 0,
-        totalTasks: 0,
-        pendingTasks: 0,
-        totalUsers: 0
-    });
-
+    const [summary, setSummary] = useState<any>(null);
     const [requests, setRequests] = useState<any[]>([]);
-
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchData = async () => {
         setLoading(true);
-        // Fetch Stats
-        Promise.all([
-            fetch('/api/reports/stats').then(res => res.json()),
-            fetch('/api/requests').then(res => res.json())
-        ]).then(([statsData, requestsData]) => {
-            if (statsData.totalTasks !== undefined) setStats(statsData);
-            if (Array.isArray(requestsData)) {
-                const pending = requestsData.filter((r: any) => r.status === 'pending').slice(0, 3);
-                setRequests(pending);
+        try {
+            const [summaryRes, requestsRes] = await Promise.all([
+                fetch('/api/dashboard/summary'),
+                fetch('/api/requests')
+            ]);
+
+            if (summaryRes.ok) setSummary(await summaryRes.json());
+            if (requestsRes.ok) {
+                const data = await requestsRes.json();
+                setRequests(data.filter((r: any) => r.status === 'pending').slice(0, 3));
             }
-        })
-            .catch(console.error)
-            .finally(() => setLoading(false));
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
     }, []);
 
-    if (loading) {
+    if (loading && !summary) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#851c74]/20 border-t-[#851c74]"></div>
+                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Sincronizando Dashboard...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 pb-20">
-            {/* Resumen Compacto */}
+        <div className="space-y-6 pb-24 px-1 animate-in slide-in-from-bottom-4 duration-500">
+            {/* Resumen Operativo Compacto */}
             <section className="grid grid-cols-2 gap-3">
-                <Link href="/alerts" className="bg-white dark:bg-[#20121d] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col justify-between h-32 active:scale-95 transition-transform">
-                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-primary mb-2">
-                        <span className="material-symbols-outlined text-lg">notifications</span>
-                    </div>
-                    <div>
-                        <span className="text-2xl font-extrabold text-[#171216] dark:text-white block">{stats.activeAlerts}</span>
-                        <span className="text-xs text-gray-500 font-bold uppercase tracking-tight">Alertas Activas</span>
-                    </div>
-                </Link>
-                <Link href="/team" className="bg-white dark:bg-[#20121d] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col justify-between h-32 active:scale-95 transition-transform">
-                    <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 mb-2">
-                        <span className="material-symbols-outlined text-lg">group</span>
-                    </div>
-                    <div>
-                        <span className="text-2xl font-extrabold text-[#171216] dark:text-white block">{stats.totalUsers}</span>
-                        <span className="text-xs text-gray-500 font-bold uppercase tracking-tight">Integrantes</span>
-                    </div>
-                </Link>
+                <DashboardCard
+                    href="/alerts"
+                    icon="notifications"
+                    label="Alertas"
+                    value={summary?.alerts?.active}
+                    color="bg-purple-50 text-[#851c74] dark:bg-purple-900/20"
+                />
+                <DashboardCard
+                    href="/team"
+                    icon="group"
+                    label="Agentes"
+                    value={summary?.users?.active}
+                    color="bg-orange-50 text-orange-600 dark:bg-orange-900/20"
+                />
+                <DashboardCard
+                    href="/tasks"
+                    icon="assignment"
+                    label="Pendientes"
+                    value={summary?.tasks?.pending}
+                    color="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+                />
+                <DashboardCard
+                    href="/requests"
+                    icon="pending_actions"
+                    label="Solicitudes"
+                    value={summary?.requests?.pending}
+                    color="bg-amber-50 text-amber-600 dark:bg-amber-900/20"
+                />
             </section>
 
-            {/* Analíticas */}
-            <section className="bg-white dark:bg-[#20121d] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-                    <h3 className="font-bold text-sm">Resumen de Operación</h3>
+            {/* Analíticas Simplificadas */}
+            <section className="bg-white dark:bg-[#1a1a1a] rounded-[2rem] border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-gray-50 dark:border-gray-800 flex justify-between items-center">
+                    <h3 className="font-black text-xs uppercase tracking-widest">Actividad Semanal</h3>
+                    <span className="material-symbols-outlined text-gray-300">query_stats</span>
                 </div>
-                <div className="p-2 overflow-x-auto">
-                    <div className="min-w-[400px]">
+                <div className="p-2 overflow-x-auto no-scrollbar">
+                    <div className="min-w-[450px]">
                         <DashboardAnalytics />
                     </div>
                 </div>
             </section>
 
-            {/* Comunicados */}
             <AnnouncementFeed />
-
-            {/* Incidencias Críticas */}
             <CriticalIncidents />
 
-            {/* Lista de Actividad Reciente Real */}
-            <section>
-                <div className="flex items-center justify-between mb-4 px-1">
-                    <h3 className="text-lg font-bold">Solicitudes Recientes</h3>
-                    <Link href="/reports" className="text-xs font-bold text-primary">Ver todas</Link>
-                </div>
-                <div className="space-y-3">
-                    {requests.length > 0 ? (
-                        requests.map((req, i) => (
-                            <div key={req.id} className="bg-white dark:bg-[#20121d] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex gap-3 active:scale-[0.98] transition-transform">
-                                <div className="w-10 h-10 rounded-full bg-purple-50 flex-shrink-0 flex items-center justify-center font-bold text-primary">
-                                    {req.type.charAt(0)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium leading-tight mb-1 truncate">
-                                        Solicitud de <span className="font-bold text-primary">{req.type}</span> en {req.territoryId || 'Territorio'}.
-                                    </p>
-                                    <p className="text-xs text-gray-400">Pendiente de revisión</p>
-                                </div>
+            {/* Solicitudes de Revisión */}
+            {requests.length > 0 && (
+                <section className="space-y-3">
+                    <h3 className="font-black text-xs uppercase text-gray-400 tracking-widest ml-2">Revisión de Datos</h3>
+                    {requests.map((req) => (
+                        <Link
+                            key={req.id}
+                            href="/requests"
+                            className="bg-white dark:bg-[#1a1a1a] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 active:scale-[0.98] transition-all"
+                        >
+                            <div className="size-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center font-black text-amber-600">
+                                <span className="material-symbols-outlined text-sm">contact_support</span>
                             </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-                            <p className="text-xs text-gray-500">No hay solicitudes pendientes</p>
-                        </div>
-                    )}
-                </div>
-            </section>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold leading-tight mb-0.5 truncate text-gray-900 dark:text-white">
+                                    Solicitud de {req.type}
+                                </p>
+                                <p className="text-[9px] font-medium text-gray-400 uppercase tracking-tighter">Pendiente de validación final</p>
+                            </div>
+                            <span className="material-symbols-outlined text-gray-300">chevron_right</span>
+                        </Link>
+                    ))}
+                </section>
+            )}
 
-            {/* Acciones Rápidas con Permisos */}
+            {/* Acciones de Liderazgo */}
             <section className="grid grid-cols-2 gap-3">
                 {hasPermission("forms:create") && (
-                    <Link href="/new-task" className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
-                        <span className="material-symbols-outlined text-primary">add_task</span>
-                        <span className="text-sm font-bold text-primary">Nueva Tarea</span>
+                    <Link href="/new-task" className="p-5 bg-[#851c74] text-white rounded-[2rem] flex flex-col items-center gap-2 shadow-lg shadow-purple-900/20 active:scale-95 transition-all">
+                        <span className="material-symbols-outlined">add_task</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Asignar Tarea</span>
                     </Link>
                 )}
-                {hasPermission("users:invite") && (
-                    <Link href="/team/invite" className="p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-xl flex items-center gap-3 active:scale-95 transition-transform">
-                        <span className="material-symbols-outlined text-orange-600">person_add</span>
-                        <span className="text-sm font-bold text-orange-600">Invitar</span>
-                    </Link>
-                )}
+                <Link href="/alerts" className="p-5 bg-black text-white rounded-[2rem] flex flex-col items-center gap-2 shadow-lg active:scale-95 transition-all">
+                    <span className="material-symbols-outlined">campaign</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">Difundir</span>
+                </Link>
             </section>
-        </div >
+        </div>
+    );
+}
+
+function DashboardCard({ href, icon, label, value, color }: any) {
+    return (
+        <Link href={href} className="bg-white dark:bg-[#1a1a1a] p-5 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col justify-between aspect-square active:scale-95 transition-all">
+            <div className={`size-10 rounded-2xl flex items-center justify-center ${color}`}>
+                <span className="material-symbols-outlined text-xl">{icon}</span>
+            </div>
+            <div>
+                <span className="text-2xl font-black text-gray-900 dark:text-white block leading-none">{value ?? '0'}</span>
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1 block">{label}</span>
+            </div>
+        </Link>
     );
 }
