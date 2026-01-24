@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRBAC } from "@/hooks/useRBAC";
 import { HierarchicalTerritorySelector } from "@/components/common/HierarchicalTerritorySelector";
+import { apiFetch } from "@/lib/api";
 
 export default function NewIncidentPage() {
     const router = useRouter();
@@ -30,15 +31,19 @@ export default function NewIncidentPage() {
 
         setLoading(true);
         try {
-            const res = await fetch('/api/incidents', {
+            const res = await apiFetch('/api/incidents', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: formData,
+                title: `Reportar incidencia: ${formData.title}`
             });
 
-            if (res.ok) {
+            if (res.ok || res.status === 202) {
                 router.push("/incidents");
-                alert("Incidencia reportada correctamente");
+                if (res.status === 202) {
+                    alert("Reporte guardado localmente. Se enviará al recuperar conexión.");
+                } else {
+                    alert("Incidencia reportada correctamente");
+                }
             } else {
                 const err = await res.json();
                 alert(err.error || "Error al reportar");

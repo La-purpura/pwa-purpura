@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useRBAC } from "@/hooks/useRBAC";
 import { HierarchicalTerritorySelector } from "@/components/common/HierarchicalTerritorySelector";
+import { apiFetch } from "@/lib/api";
 
 // Definición de Pasos
 const STEPS = [
@@ -37,15 +38,20 @@ export default function NewProjectPage() {
 
         setIsSubmitting(true);
         try {
-            const res = await fetch('/api/projects', {
+            const res = await apiFetch('/api/projects', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: formData,
+                title: `Crear proyecto: ${formData.title}`
             });
 
-            if (res.ok) {
-                const project = await res.json();
-                router.push(`/projects/${project.id}`);
+            if (res.ok || res.status === 202) {
+                if (res.status === 202) {
+                    alert("Proyecto guardado localmente. Redirigiendo...");
+                    router.push("/projects");
+                } else {
+                    const project = await res.json();
+                    router.push(`/projects/${project.id}`);
+                }
             } else {
                 alert("Error al crear proyecto");
             }

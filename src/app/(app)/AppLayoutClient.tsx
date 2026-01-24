@@ -11,6 +11,8 @@ import { NotificationsPopover } from "@/components/layout/NotificationsPopover";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { GlobalBanner } from "@/components/layout/GlobalBanner";
 import { BroadcastModal } from "@/components/layout/BroadcastModal";
+import { SyncManager } from "@/components/layout/SyncManager";
+import { SyncStatusIndicator } from "@/components/layout/SyncStatusIndicator";
 
 export default function AppLayoutClient({ children }: { children: React.ReactNode }) {
     const { user, setUser } = useAppStore();
@@ -73,6 +75,8 @@ export default function AppLayoutClient({ children }: { children: React.ReactNod
             <GlobalBanner />
             <CommandPalette />
             <BroadcastModal />
+            <SyncManager />
+            <SyncStatusIndicator />
 
             {/* Sidebar solo visible en escritorio */}
             <div className="hidden md:block">

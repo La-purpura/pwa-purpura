@@ -15,6 +15,16 @@ export interface Announcement {
   isActive: boolean;
 }
 
+export interface QueuedMutation {
+  id: string;
+  endpoint: string;
+  method: 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  payload: any;
+  timestamp: number;
+  retryCount: number;
+  title: string; // User-friendly description of the action
+}
+
 interface AppState {
   // Auth
   user: (User & { permissions?: string[] }) | null;
@@ -48,10 +58,12 @@ interface AppState {
   setProjects: (projects: Project[]) => void;
 
   // Offline Queue
-  offlineQueue: any[];
-  addToOfflineQueue: (item: any) => void;
+  offlineQueue: QueuedMutation[];
+  addToOfflineQueue: (item: Omit<QueuedMutation, 'id' | 'timestamp' | 'retryCount'>) => void;
   removeFromOfflineQueue: (id: string) => void;
   clearOfflineQueue: () => void;
+  syncStatus: 'idle' | 'syncing' | 'error' | 'success';
+  setSyncStatus: (status: 'idle' | 'syncing' | 'error' | 'success') => void;
 
   // KPIs
   kpis: Kpis;
@@ -114,9 +126,21 @@ export const useAppStore = create<AppState>()(
 
       // Offline
       offlineQueue: [],
-      addToOfflineQueue: (item) => set((state) => ({ offlineQueue: [...state.offlineQueue, item] })),
+      addToOfflineQueue: (item) => set((state) => ({
+        offlineQueue: [
+          ...state.offlineQueue,
+          {
+            ...item,
+            id: crypto.randomUUID(),
+            timestamp: Date.now(),
+            retryCount: 0
+          }
+        ]
+      })),
       removeFromOfflineQueue: (id) => set((state) => ({ offlineQueue: state.offlineQueue.filter((i) => i.id !== id) })),
       clearOfflineQueue: () => set({ offlineQueue: [] }),
+      syncStatus: 'idle',
+      setSyncStatus: (status) => set({ syncStatus: status }),
 
       // KPIs: Real 0 initially
       kpis: {

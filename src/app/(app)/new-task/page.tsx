@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { useRBAC } from "@/hooks/useRBAC";
 import { HierarchicalTerritorySelector } from "@/components/common/HierarchicalTerritorySelector";
+import { apiFetch } from "@/lib/api";
 
 export default function NewTaskPage() {
   const router = useRouter();
@@ -47,13 +48,14 @@ export default function NewTaskPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/tasks", {
+      const res = await apiFetch("/api/tasks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: formData,
+        title: `Crear tarea: ${formData.title}`
       });
 
-      if (res.ok) {
+      if (res.ok || res.status === 202) {
+        // En caso de 202 (queued), también redirigimos
         router.push("/tasks");
         router.refresh();
       } else {
