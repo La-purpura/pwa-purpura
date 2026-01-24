@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
     const isAppRoute = pathname.startsWith("/home") ||
         pathname.startsWith("/dashboard") ||
         pathname.startsWith("/tasks") ||
-        pathname.startsWith("/incidents") ||
+        pathname.startsWith("/reports") ||
         pathname.startsWith("/projects") ||
         pathname.startsWith("/team") ||
         pathname.startsWith("/library") ||

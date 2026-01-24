@@ -13,7 +13,7 @@ model Territory {
   type               String
   parentId           String?
   alertTerritories   AlertTerritory[]
-  incidentTerritories IncidentTerritory[]
+  reportTerritories   ReportTerritory[]
   postTerritories     PostTerritory[]
   projectTerritories ProjectTerritory[]
   resourceTerritories ResourceTerritory[]
@@ -37,6 +37,9 @@ model User {
   email             String       @unique
   passwordHash      String
   name              String?
+  alias             String?
+  phone             String?
+  photoUrl          String?
   role              String
   branchId          String?
   territoryScope    Json?
@@ -45,8 +48,8 @@ model User {
   updatedAt         DateTime     @updatedAt
   territoryId       String?
   auditLogs         AuditLog[]
-  assignedIncidents Incident[]   @relation("AssignedIncidents")
-  reportedIncidents Incident[]   @relation("ReportedIncidents")
+  assignedReports   Report[]     @relation("AssignedReports")
+  reportedReports   Report[]     @relation("ReportedReports")
   invitationsSent   Invitation[] @relation("InvitedBy")
   authoredPosts     Post[]       @relation("AuthoredPosts")
   readPosts         PostRead[]
@@ -266,7 +269,7 @@ model ResourceTerritory {
   @@id([resourceId, territoryId])
 }
 
-model Incident {
+model Report {
   id           String     @id @default(cuid())
   title        String
   description  String?
@@ -282,18 +285,18 @@ model Incident {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   resolvedAt   DateTime?
-  assignedTo   User?      @relation("AssignedIncidents", fields: [assignedToId], references: [id])
-  reportedBy   User       @relation("ReportedIncidents", fields: [reportedById], references: [id])
-  territories  IncidentTerritory[]
+  assignedTo   User?      @relation("AssignedReports", fields: [assignedToId], references: [id])
+  reportedBy   User       @relation("ReportedReports", fields: [reportedById], references: [id])
+  territories  ReportTerritory[]
 }
 
-model IncidentTerritory {
-  incidentId  String
+model ReportTerritory {
+  reportId    String
   territoryId String
-  incident    Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  report      Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
   territory   Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
 
-  @@id([incidentId, territoryId])
+  @@id([reportId, territoryId])
 }
 
 model AuditLog {

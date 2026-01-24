@@ -23,6 +23,29 @@ export default function SettingsPage() {
       </header>
 
       <div className="space-y-6">
+        {/* Perfil de Usuario */}
+        <section
+          onClick={() => router.push("/settings/profile")}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-2 border-transparent hover:border-[#851c74]/20"
+        >
+          <div className="flex items-center gap-4">
+            <div className="size-16 rounded-full bg-purple-100 dark:bg-purple-900/30 overflow-hidden flex items-center justify-center border-2 border-white dark:border-gray-800">
+              {user?.photoUrl ? (
+                <img src={user.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl font-black text-[#851c74]">
+                  {(user?.alias || user?.name || "?").substring(0, 1).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="text-lg font-black leading-tight">{user?.alias || user?.name}</p>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{ROLE_LABELS[user?.role || "Militante"]}</p>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-gray-300">chevron_right</span>
+        </section>
+
         {/* Preferencias de App */}
         <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
           <h2 className="px-6 pt-6 pb-2 text-xs font-bold uppercase text-gray-400">Preferencias</h2>

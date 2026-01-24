@@ -3,12 +3,15 @@ import { Role } from "./rbac";
 export interface User {
     id: string;
     name: string;
+    alias?: string;
     email: string;
+    phone?: string;
+    photoUrl?: string;
     role: Role;
     territory: string;
     territoryId?: string;
     branchId?: string;
-    avatar: string;
+    avatar: string; // Keep for compatibility if used elsewhere, but we'll use photoUrl too
 }
 
 export interface Task {
@@ -26,17 +29,18 @@ export interface Task {
     subtasksTotal: number;
 }
 
-export interface Incident {
+export interface Report {
     id: string;
     title: string;
     severity: "low" | "medium" | "high" | "critical";
-    status: "open" | "resolved" | "in_review";
+    status: "open" | "resolved" | "in_review" | "pending" | "in_progress" | "closed";
     date: string;
     location: string;
     description: string;
     territory: string;
     createdAt: string;
     priority: "high" | "medium" | "low" | "critical";
+    photoUrl?: string | null;
 }
 
 export interface Alert {
@@ -56,7 +60,7 @@ export interface Kpis {
     pendingTasks: number;
     projects: number;
     coverage: number;
-    incidents: number;
+    reports: number;
 }
 
 export interface Draft {
@@ -100,12 +104,4 @@ export interface News {
     summary: string;
     author: string;
     date: string;
-}
-
-export interface Report {
-    id: string;
-    title: string;
-    status: "resolved" | "pending" | "critical";
-    territory: string;
-    createdAt: string;
 }

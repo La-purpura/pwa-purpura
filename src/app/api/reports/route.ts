@@ -2,17 +2,17 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requirePermission, enforceScope, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
-import { IncidentSchema } from "@/lib/schemas";
+import { ReportSchema } from "@/lib/schemas";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /**
- * GET /api/incidents
+ * GET /api/reports
  */
 export async function GET(request: Request) {
   try {
-    const session = await requirePermission('incidents:view');
+    const session = await requirePermission('reports:view');
     const { searchParams } = new URL(request.url);
 
     const status = searchParams.get('status');
@@ -28,20 +28,20 @@ export async function GET(request: Request) {
     if (category) where.category = category;
     if (priority) where.priority = priority;
 
-    const incidents = await prisma.incident.findMany({
+    const reports = await prisma.report.findMany({
       where,
       include: {
-        reportedBy: { select: { name: true, email: true } },
-        assignedTo: { select: { name: true, email: true } },
+        reportedBy: { select: { name: true, alias: true, email: true } },
+        assignedTo: { select: { name: true, alias: true, email: true } },
         territories: { include: { territory: { select: { name: true } } } }
       },
       orderBy: { createdAt: 'desc' },
       take: limit && limit > 0 && limit <= 100 ? limit : 50
     });
 
-    const mapped = incidents.map(inc => ({
-      ...inc,
-      territoryNames: inc.territories.map(t => t.territory.name).join(', ') || 'Global'
+    const mapped = reports.map(rep => ({
+      ...rep,
+      territoryNames: rep.territories.map(t => t.territory.name).join(', ') || 'Global'
     }));
 
     const response = NextResponse.json(mapped);
@@ -52,21 +52,21 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST /api/incidents
+ * POST /api/reports
  */
 export async function POST(request: Request) {
   try {
-    const session = await requirePermission('incidents:create');
+    const session = await requirePermission('reports:create');
     const body = await request.json();
 
-    const result = IncidentSchema.safeParse(body);
+    const result = ReportSchema.safeParse(body);
     if (!result.success) {
       return handleApiError(result.error);
     }
 
     const { territoryIds, ...rest } = result.data;
 
-    const incident = await prisma.incident.create({
+    const report = await prisma.report.create({
       data: {
         title: rest.title,
         description: rest.description,
@@ -85,9 +85,9 @@ export async function POST(request: Request) {
       }
     });
 
-    logAudit("ALERT_CREATED", "Incident", incident.id, session.sub, { title: incident.title });
+    logAudit("REPORT_CREATED", "Report", report.id, session.sub, { title: report.title });
 
-    const response = NextResponse.json(incident, { status: 201 });
+    const response = NextResponse.json(report, { status: 201 });
     return applySecurityHeaders(response);
   } catch (error) {
     return handleApiError(error);

@@ -3,9 +3,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// Re-importing types from fixtures (now only for types, data is DB-driven)
 import {
-  User, Task, Incident, Alert, Kpis, Draft, Project, Report
+  User, Task, Report, Alert, Kpis, Draft, Project
 } from "./types";
 
 // Announcement Types
@@ -36,16 +35,14 @@ interface AppState {
   setTasks: (tasks: Task[]) => void;
   addTask: (task: Task) => void;
 
-  incidents: Incident[];
-  setIncidents: (incidents: Incident[]) => void;
-  addIncident: (incident: Incident) => void;
+  reports: Report[];
+  setReports: (reports: Report[]) => void;
+  addReport: (report: Report) => void;
 
   alerts: Alert[];
   setAlerts: (alerts: Alert[]) => void;
   addAlert: (alert: Alert) => void;
   markAlertAsRead: (id: string) => void;
-
-  reports: Report[];
 
   users: User[];
   addUser: (user: User) => void;
@@ -101,9 +98,9 @@ export const useAppStore = create<AppState>()(
       setTasks: (tasks) => set({ tasks }),
       addTask: (task) => set((state) => ({ tasks: [task, ...state.tasks] })),
 
-      incidents: [],
-      setIncidents: (incidents) => set({ incidents }),
-      addIncident: (incident) => set((state) => ({ incidents: [incident, ...state.incidents] })),
+      reports: [],
+      setReports: (reports) => set({ reports }),
+      addReport: (report) => set((state) => ({ reports: [report, ...state.reports] })),
 
       alerts: [],
       setAlerts: (alerts) => set({ alerts }),
@@ -111,8 +108,6 @@ export const useAppStore = create<AppState>()(
       markAlertAsRead: (id) => set((state) => ({
         alerts: state.alerts.map((a) => a.id === id ? { ...a, isRead: true } : a)
       })),
-
-      reports: [],
 
       users: [],
       addUser: (user) => set((state) => ({ users: [user, ...state.users] })),
@@ -142,13 +137,13 @@ export const useAppStore = create<AppState>()(
       syncStatus: 'idle',
       setSyncStatus: (status) => set({ syncStatus: status }),
 
-      // KPIs: Real 0 initially
+      // KPIs
       kpis: {
         activeAlerts: 0,
         pendingTasks: 0,
         projects: 0,
         coverage: 0,
-        incidents: 0,
+        reports: 0,
       },
       updateKpis: (newKpis) => set((state) => ({ kpis: { ...state.kpis, ...newKpis } })),
 

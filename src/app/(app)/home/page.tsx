@@ -8,7 +8,7 @@ import { es } from "date-fns/locale";
 
 interface ActivityItem {
     id: string;
-    type: 'TASK' | 'INCIDENT' | 'ALERT';
+    type: 'TASK' | 'REPORT' | 'ALERT';
     title: string;
     timestamp: string;
     user: string;
@@ -24,15 +24,15 @@ export default function HomePage() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const [sumRes, taskRes, incRes] = await Promise.all([
+                const [sumRes, taskRes, reportRes] = await Promise.all([
                     fetch('/api/dashboard/summary'),
                     fetch('/api/tasks?limit=5'),
-                    fetch('/api/incidents?limit=5')
+                    fetch('/api/reports?limit=5')
                 ]);
 
                 const sumData = await sumRes.json();
                 const taskData = await taskRes.json();
-                const incData = await incRes.json();
+                const reportData = await reportRes.json();
 
                 setSummary(sumData);
 
@@ -46,15 +46,15 @@ export default function HomePage() {
                         user: t.assigneeName || 'Sin asignar',
                         status: t.status
                     })),
-                    ...((Array.isArray(incData) ? incData : [])).map((i: any) => ({
-                        id: i.id,
-                        type: 'INCIDENT' as const,
-                        title: i.title,
-                        timestamp: i.createdAt,
-                        user: i.reportedBy?.name || 'Sistema',
-                        status: i.status
+                    ...((Array.isArray(reportData) ? reportData : [])).map((r: any) => ({
+                        id: r.id,
+                        type: 'REPORT' as const,
+                        title: r.title,
+                        timestamp: r.createdAt,
+                        user: r.reportedBy?.alias || r.reportedBy?.name || 'Sistema',
+                        status: r.status
                     }))
-                ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10);
+                ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 12);
 
                 setRecentActivity(activities);
             } catch (e) {
@@ -70,60 +70,64 @@ export default function HomePage() {
 
     return (
         <main className="min-h-screen pb-24 px-4 pt-6 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <header className="flex flex-col gap-1">
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white">Resumen Diario</h1>
-                <p className="text-xs font-black uppercase text-[#851c74] tracking-[0.3em]">{todayStr}</p>
+            <header className="flex flex-col gap-1 items-center text-center">
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white">Bitácora Territorial</h1>
+                <p className="text-[10px] font-black uppercase text-[#851c74] tracking-[0.4em]">{todayStr}</p>
             </header>
 
             <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard label="Tareas" value={summary?.tasks?.pending || 0} color="bg-purple-600" />
-                <StatCard label="Incidencias" value={summary?.incidents?.total || 0} color="bg-orange-500" />
+                <StatCard label="Reportes" value={summary?.incidents?.total || 0} color="bg-orange-500" />
                 <StatCard label="Alertas" value={summary?.alerts?.active || 0} color="bg-red-500" />
                 <StatCard label="Proyectos" value={summary?.projects?.total || 0} color="bg-blue-600" />
             </section>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <section className="lg:col-span-2 space-y-6">
-                    <h2 className="text-lg font-black flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#851c74]">tactic</span>
-                        Actividad en Tiempo Real
+                    <h2 className="text-lg font-black flex items-center gap-3">
+                        <span className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-[#851c74] material-symbols-outlined">tactic</span>
+                        Últimos Movimientos
                     </h2>
 
                     <div className="space-y-4">
                         {loading ? (
                             Array.from({ length: 5 }).map((_, i) => (
-                                <div key={i} className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-2xl"></div>
+                                <div key={i} className="h-20 bg-gray-50 dark:bg-gray-900 animate-pulse rounded-3xl border border-transparent"></div>
                             ))
                         ) : recentActivity.length === 0 ? (
-                            <p className="text-gray-400 italic text-center py-10">No hay actividad reciente registrada.</p>
+                            <div className="py-20 text-center bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] border border-dashed border-gray-200 dark:border-gray-800">
+                                <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Sin actividad registrada en la zona</p>
+                            </div>
                         ) : (
                             recentActivity.map((activity) => (
-                                <div key={`${activity.type}-${activity.id}`} className="flex items-start gap-4 p-4 bg-white dark:bg-[#1a1a1a] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
-                                    <div className={`mt-1 size-10 rounded-full flex items-center justify-center shrink-0 ${activity.type === 'TASK' ? 'bg-purple-100 text-purple-600' :
-                                            activity.type === 'INCIDENT' ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'
+                                <Link
+                                    key={`${activity.type}-${activity.id}`}
+                                    href={activity.type === 'TASK' ? `/tasks` : `/reports/${activity.id}`}
+                                    className="flex items-center gap-4 p-5 bg-white dark:bg-[#1a1a1a] rounded-3xl border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-[#851c74]/20 transition-all group"
+                                >
+                                    <div className={`size-12 rounded-[1rem] flex items-center justify-center shrink-0 shadow-sm ${activity.type === 'TASK' ? 'bg-purple-50 text-purple-600' :
+                                        activity.type === 'REPORT' ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'
                                         }`}>
-                                        <span className="material-symbols-outlined text-lg">
-                                            {activity.type === 'TASK' ? 'task_alt' : 'report_problem'}
+                                        <span className="material-symbols-outlined text-xl">
+                                            {activity.type === 'TASK' ? 'task_alt' : 'quick_reference_all'}
                                         </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                                                {activity.type === 'TASK' ? 'Tarea' : 'Incidencia'}
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#851c74]/50">
+                                                {activity.type === 'TASK' ? 'Tarea Operativa' : 'Información / Reporte'}
                                             </span>
-                                            <span className="text-[10px] font-bold text-gray-300">
+                                            <span className="text-[10px] font-bold text-gray-400">
                                                 {format(new Date(activity.timestamp), 'HH:mm')}
                                             </span>
                                         </div>
-                                        <h4 className="font-bold text-gray-900 dark:text-white truncate">{activity.title}</h4>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Por <span className="font-bold text-gray-700 dark:text-gray-300">{activity.user}</span> •
-                                            <span className={`ml-1 uppercase font-black text-[9px] ${activity.status === 'PENDING' || activity.status === 'pending' ? 'text-amber-500' : 'text-green-500'}`}>
-                                                {activity.status}
-                                            </span>
+                                        <h4 className="font-black text-gray-900 dark:text-white truncate text-sm">{activity.title}</h4>
+                                        <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-tight">
+                                            Autor: <span className="text-gray-900 dark:text-gray-300">{activity.user}</span>
                                         </p>
                                     </div>
-                                </div>
+                                    <span className="material-symbols-outlined text-gray-300 group-hover:text-[#851c74] transition-colors">chevron_right</span>
+                                </Link>
                             ))
                         )}
                     </div>
@@ -132,25 +136,25 @@ export default function HomePage() {
                 <aside className="space-y-6">
                     <div className="bg-[#851c74] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden group">
                         <div className="relative z-10">
-                            <h3 className="text-xl font-black mb-2">Comandancia</h3>
-                            <p className="text-white/70 text-sm mb-6">Accede a las herramientas críticas de gestión territorial.</p>
-                            <Link href="/dashboard" className="inline-flex items-center gap-2 bg-white text-[#851c74] px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">
-                                Panel de Control
-                                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            <h3 className="text-xl font-black mb-2 leading-none">Mi Perfil</h3>
+                            <p className="text-white/60 text-xs font-bold uppercase tracking-wider mb-6">Configura tu identidad</p>
+                            <Link href="/settings/profile" className="inline-flex items-center gap-2 bg-white text-[#851c74] px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg">
+                                Gestionar Perfil
+                                <span className="material-symbols-outlined text-sm">person</span>
                             </Link>
                         </div>
-                        <span className="material-symbols-outlined absolute -bottom-4 -right-4 text-[120px] text-white/10 rotate-12">dashboard</span>
+                        <span className="material-symbols-outlined absolute -bottom-4 -right-4 text-[120px] text-white/10 rotate-12 group-hover:rotate-0 transition-transform duration-500">account_circle</span>
                     </div>
 
-                    <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-[2.5rem] border border-gray-100 dark:border-gray-800">
-                        <h4 className="font-black text-xs uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-sm">quick_reference</span>
-                            Acciones Rápidas
+                    <div className="bg-white dark:bg-[#1a1a1a] p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
+                        <h4 className="font-black text-[10px] uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-base">bolt</span>
+                            Terminal de Acceso
                         </h4>
                         <div className="grid grid-cols-1 gap-3">
-                            <QuickButton href="/new-task" label="Crear Tarea" icon="add_task" />
-                            <QuickButton href="/incidents/new" label="Reportar Evento" icon="report_gmailerrorred" />
-                            <QuickButton href="/alerts" label="Emitir Broadcast" icon="podcasts" />
+                            <QuickButton href="/tasks" label="Hojas de Ruta" icon="map" />
+                            <QuickButton href="/reports/new" label="Emitir Reporte" icon="add_reaction" />
+                            <QuickButton href="/alerts" label="Comunicaciones" icon="podcasts" />
                         </div>
                     </div>
                 </aside>
@@ -161,24 +165,22 @@ export default function HomePage() {
 
 function StatCard({ label, value, color }: { label: string, value: number, color: string }) {
     return (
-        <div className="bg-white dark:bg-[#1a1a1a] p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4">
-            <div className={`size-1.5 rounded-full ${color}`}></div>
-            <div>
-                <span className="block text-xl font-black text-gray-900 dark:text-white tracking-tight">{value}</span>
-                <span className="block text-[10px] font-black uppercase text-gray-400 tracking-widest">{label}</span>
-            </div>
+        <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
+            <div className={`size-1 rounded-full ${color} mb-3`}></div>
+            <span className="block text-2xl font-black text-gray-900 dark:text-white tracking-tighter leading-none mb-1">{value}</span>
+            <span className="block text-[10px] font-black uppercase text-gray-400 tracking-widest">{label}</span>
         </div>
     );
 }
 
 function QuickButton({ href, label, icon }: { href: string, label: string, icon: string }) {
     return (
-        <Link href={href} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-[#851c74]/5 hover:text-[#851c74] transition-all group">
+        <Link href={href} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 hover:bg-[#851c74] hover:text-white transition-all group scale-100 active:scale-95 shadow-sm border border-transparent">
             <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-gray-400 group-hover:text-[#851c74] transition-colors">{icon}</span>
-                <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
+                <span className="material-symbols-outlined text-gray-400 group-hover:text-white transition-colors text-xl">{icon}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
             </div>
-            <span className="material-symbols-outlined text-gray-300 text-sm">chevron_right</span>
+            <span className="material-symbols-outlined text-gray-300 group-hover:text-white text-sm transition-colors">chevron_right</span>
         </Link>
     );
 }

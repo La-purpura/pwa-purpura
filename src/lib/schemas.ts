@@ -19,7 +19,7 @@ export const TaskSchema = z.object({
     territoryIds: z.array(z.string()).optional()
 });
 
-export const IncidentSchema = z.object({
+export const ReportSchema = z.object({
     title: z.string().min(3),
     description: z.string().optional(),
     category: z.string(),

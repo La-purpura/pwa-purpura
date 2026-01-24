@@ -17,7 +17,7 @@ export async function PATCH(
         const { id } = params;
         const body = await request.json();
 
-        const { role, branchId, territoryId, territoryScope, status, name } = body;
+        const { role, branchId, territoryId, territoryScope, status, name, alias, phone } = body;
 
         // 1. Verificar existencia
         const existingUser = await prisma.user.findUnique({ where: { id } });
@@ -33,6 +33,8 @@ export async function PATCH(
         if (territoryScope !== undefined) updateData.territoryScope = territoryScope;
         if (status) updateData.status = status;
         if (name) updateData.name = name;
+        if (alias !== undefined) updateData.alias = alias;
+        if (phone !== undefined) updateData.phone = phone;
 
         // 3. Ejecutar actualización y flushing de sesiones si hay cambios críticos
         const isCriticalChange = role || branchId !== undefined || territoryId !== undefined;

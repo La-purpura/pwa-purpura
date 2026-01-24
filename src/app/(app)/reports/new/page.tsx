@@ -6,7 +6,7 @@ import { useRBAC } from "@/hooks/useRBAC";
 import { HierarchicalTerritorySelector } from "@/components/common/HierarchicalTerritorySelector";
 import { apiFetch } from "@/lib/api";
 
-export default function NewIncidentPage() {
+export default function NewReportPage() {
     const router = useRouter();
     const { hasPermission } = useRBAC();
     const [loading, setLoading] = useState(false);
@@ -31,22 +31,22 @@ export default function NewIncidentPage() {
 
         setLoading(true);
         try {
-            const res = await apiFetch('/api/incidents', {
+            const res = await apiFetch('/api/reports', {
                 method: 'POST',
                 body: formData,
-                title: `Reportar incidencia: ${formData.title}`
+                title: `Nuevo reporte: ${formData.title}`
             });
 
             if (res.ok || res.status === 202) {
-                router.push("/incidents");
+                router.push("/reports");
                 if (res.status === 202) {
-                    alert("Reporte guardado localmente. Se enviará al recuperar conexión.");
+                    alert("Reporte guardado localmente (PWA). Se enviará al recuperar conexión.");
                 } else {
-                    alert("Incidencia reportada correctamente");
+                    alert("Reporte enviado correctamente");
                 }
             } else {
                 const err = await res.json();
-                alert(err.error || "Error al reportar");
+                alert(err.error || "Error al enviar el reporte");
             }
         } catch (e) {
             alert("Error de conexión");
@@ -55,26 +55,29 @@ export default function NewIncidentPage() {
         }
     };
 
-    if (!hasPermission('incidents:create')) return <div className="p-20 text-center">No autorizado.</div>;
+    if (!hasPermission('reports:create')) return <div className="p-20 text-center font-bold text-red-500 uppercase tracking-widest">Acceso restringido.</div>;
 
     return (
         <main className="min-h-screen bg-gray-50 dark:bg-black p-6 pb-24">
             <header className="flex items-center gap-4 mb-8 max-w-2xl mx-auto">
-                <button onClick={() => router.back()} className="size-10 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#851c74]">
+                <button onClick={() => router.back()} className="size-12 rounded-2xl bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-[#851c74] hover:bg-gray-100 transition-colors">
                     <span className="material-symbols-outlined">arrow_back</span>
                 </button>
-                <h1 className="text-2xl font-black">Reportar Incidencia</h1>
+                <div>
+                    <h1 className="text-2xl font-black">Nuevo Reporte Territorial</h1>
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Información de campo en tiempo real</p>
+                </div>
             </header>
 
             <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl mx-auto">
-                <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-800 space-y-6">
+                <div className="bg-white dark:bg-[#1a1a1a] p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-800 space-y-6">
                     <div>
-                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">Título de la Incidencia</label>
+                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">Título del Reporte</label>
                         <input
                             type="text"
                             required
                             className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-900 border-none focus:ring-2 ring-[#851c74] text-sm font-bold"
-                            placeholder="Ej: Poste de luz caído"
+                            placeholder="Ej: Detectada falta de insumos"
                             value={formData.title}
                             onChange={e => setFormData({ ...formData, title: e.target.value })}
                         />
@@ -84,7 +87,7 @@ export default function NewIncidentPage() {
                         <div>
                             <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">Categoría</label>
                             <select
-                                className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-900 border-none text-xs font-bold"
+                                className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-900 border-none text-xs font-bold ring-[#851c74] focus:ring-2"
                                 value={formData.category}
                                 onChange={e => setFormData({ ...formData, category: e.target.value })}
                             >
@@ -98,7 +101,7 @@ export default function NewIncidentPage() {
                         <div>
                             <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">Prioridad</label>
                             <select
-                                className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-900 border-none text-xs font-bold"
+                                className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-900 border-none text-xs font-bold ring-[#851c74] focus:ring-2"
                                 value={formData.priority}
                                 onChange={e => setFormData({ ...formData, priority: e.target.value })}
                             >
@@ -111,18 +114,18 @@ export default function NewIncidentPage() {
                     </div>
 
                     <HierarchicalTerritorySelector
-                        label="Alcance / Localización"
+                        label="Ámbito Territorial"
                         selectedIds={formData.territoryIds}
                         onChange={(ids) => setFormData({ ...formData, territoryIds: ids })}
                     />
 
                     <div>
-                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">Descripción del Evento</label>
+                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">Descripción y Hallazgos</label>
                         <textarea
                             required
                             rows={4}
-                            className="w-full p-4 bg-gray-50 dark:bg-gray-900 border-none focus:ring-2 ring-[#851c74] text-sm resize-none leading-relaxed"
-                            placeholder="Describe qué sucedió y qué impacto tiene..."
+                            className="w-full p-4 bg-gray-50 dark:bg-gray-900 border-none focus:ring-2 ring-[#851c74] text-sm rounded-2xl resize-none leading-relaxed"
+                            placeholder="Describe el evento con el mayor detalle posible..."
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
                         />
@@ -132,14 +135,14 @@ export default function NewIncidentPage() {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-[#851c74] text-white font-black p-5 rounded-2xl shadow-xl shadow-purple-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                    className="w-full bg-[#851c74] text-white font-black p-6 rounded-[2rem] shadow-xl shadow-purple-900/20 active:scale-95 transition-all flex items-center justify-center gap-3 group"
                 >
                     {loading ? (
                         <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     ) : (
                         <>
-                            <span className="material-symbols-outlined">report_problem</span>
-                            ENVIAR REPORTE
+                            <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">send</span>
+                            CONFIRMAR Y EMITIR REPORTE
                         </>
                     )}
                 </button>

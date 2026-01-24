@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
         // 1. Obtener filtros de alcance territorial (M-M)
         const taskScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
-        const incidentScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
+        const reportScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
         const alertScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
         const projectScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
 
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
         const [
             tasksCount,
             projectsCount,
-            incidentsCount,
+            reportsCount,
             alertsActive,
             alertsUnread,
             requestsPending,
@@ -36,10 +36,10 @@ export async function GET(request: Request) {
                 where: projectScope,
                 _count: true
             }),
-            // Incidents by Status
-            prisma.incident.groupBy({
+            // Reports by Status
+            prisma.report.groupBy({
                 by: ['status'],
-                where: incidentScope,
+                where: reportScope,
                 _count: true
             }),
             // Active Alerts
@@ -80,9 +80,9 @@ export async function GET(request: Request) {
                 total: projectsCount.reduce((acc, curr) => acc + curr._count, 0),
                 byStatus: projectsCount.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {})
             },
-            incidents: {
-                total: incidentsCount.reduce((acc, curr) => acc + curr._count, 0),
-                byStatus: incidentsCount.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {})
+            reports: {
+                total: reportsCount.reduce((acc, curr) => acc + curr._count, 0),
+                byStatus: reportsCount.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {})
             },
             alerts: {
                 active: alertsActive,

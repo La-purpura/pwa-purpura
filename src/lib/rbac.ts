@@ -11,8 +11,8 @@ export type Permission =
     | "forms:review" | "forms:request_changes" | "forms:approve" | "forms:reject"
     | "templates:manage"
 
-    // Incidencias y Proyectos
-    | "incidents:view" | "incidents:create" | "incidents:manage"
+    // Reportes y Proyectos
+    | "reports:view" | "reports:create" | "reports:manage"
     | "projects:view" | "projects:create" | "projects:manage"
 
     // Contenido (Intranet/Biblioteca)
@@ -47,7 +47,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         "roles:assign", "roles:manage",
         "territory:view", "territory:manage",
         "forms:view", "forms:create", "forms:edit_own", "forms:submit", "forms:review", "forms:request_changes", "forms:approve", "forms:reject", "templates:manage",
-        "incidents:view", "incidents:create", "incidents:manage",
+        "reports:view", "reports:create", "reports:manage",
         "projects:view", "projects:create", "projects:manage",
         "content:view", "content:publish", "content:archive", "documents:upload", "documents:version",
         "chat:use", "chat:create_channel", "chat:moderate",
@@ -58,7 +58,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     AdminNacional: [
         "users:view", "users:invite", "users:edit", "users:revoke", "roles:assign", "territory:view", "territory:manage",
         "forms:view", "forms:review", "forms:request_changes", "forms:approve", "forms:reject",
-        "incidents:view", "incidents:manage", "projects:view", "projects:manage",
+        "reports:view", "reports:manage", "projects:view", "projects:manage",
         "content:view", "content:publish", "documents:upload", "chat:use", "chat:create_channel", "audit:view",
         "posts:view", "posts:create", "posts:manage",
         "resources:view", "resources:manage"
@@ -66,28 +66,29 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     AdminProvincial: [
         "users:view", "users:invite", "users:edit", "users:revoke", "roles:assign", "territory:view",
         "forms:view", "forms:review", "forms:request_changes", "forms:approve", "forms:reject",
-        "incidents:view", "incidents:manage", "projects:view", "projects:manage",
+        "reports:view", "reports:manage", "projects:view", "projects:manage",
         "content:view", "content:publish", "documents:upload", "chat:use", "chat:create_channel", "audit:view",
         "posts:view", "posts:create",
         "resources:view", "resources:manage"
     ],
     Coordinador: [
         "users:view", "territory:view", "forms:view", "forms:review", "forms:request_changes",
-        "incidents:view", "incidents:create", "incidents:manage", "projects:view", "projects:create", "projects:manage",
+        "reports:view", "reports:create", "reports:manage", "projects:view", "projects:create", "projects:manage",
         "content:view", "content:publish", "chat:use", "chat:create_channel", "audit:view",
         "posts:view",
         "resources:view"
     ],
     Colaborador: [
         "forms:view", "forms:edit_own", "forms:submit",
-        "incidents:view", "incidents:create", "incidents:manage", "projects:view", "projects:create",
+        "reports:view", "reports:create", "reports:manage", "projects:view", "projects:create",
+        "reports:view", "reports:create", "reports:manage", "projects:view", "projects:create",
         "content:view", "documents:upload", "chat:use",
         "posts:view",
         "resources:view"
     ],
     Referente: [
         "forms:create", "forms:edit_own", "forms:submit",
-        "incidents:create", "incidents:manage", "projects:create", "projects:manage",
+        "reports:create", "reports:manage", "projects:create", "projects:manage",
         "documents:upload", "content:view", "chat:use",
         "posts:view",
         "resources:view"
@@ -98,7 +99,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         "resources:view"
     ],
     AuditorLectura: [
-        "users:view", "territory:view", "forms:view", "incidents:view", "projects:view", "content:view", "audit:view",
+        "users:view", "territory:view", "forms:view", "reports:view", "projects:view", "content:view", "audit:view",
         "posts:view",
         "resources:view"
     ]

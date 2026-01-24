@@ -5,47 +5,47 @@ import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
-// GET: Get incident details
+// GET: Get report details
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
     try {
-        const session = await requirePermission('incidents:view');
+        const session = await requirePermission('reports:view');
         const { id } = params;
 
-        const incident = await prisma.incident.findUnique({
+        const report = await prisma.report.findUnique({
             where: { id },
             include: {
                 reportedBy: {
-                    select: { name: true, email: true, role: true }
+                    select: { name: true, alias: true, email: true, role: true }
                 },
                 assignedTo: {
-                    select: { name: true, email: true, role: true }
+                    select: { name: true, alias: true, email: true, role: true }
                 },
-                territory: {
-                    select: { name: true }
+                territories: {
+                    include: { territory: { select: { name: true } } }
                 }
             }
         });
 
-        if (!incident) {
-            return NextResponse.json({ error: "Incidencia no encontrada" }, { status: 404 });
+        if (!report) {
+            return NextResponse.json({ error: "Reporte no encontrado" }, { status: 404 });
         }
 
-        return NextResponse.json(incident);
+        return NextResponse.json(report);
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-// PATCH: Update incident (status, assignment, etc.)
+// PATCH: Update report (status, assignment, etc.)
 export async function PATCH(
     request: Request,
     { params }: { params: { id: string } }
 ) {
     try {
-        const session = await requirePermission('incidents:manage');
+        const session = await requirePermission('reports:manage');
         const { id } = params;
         const body = await request.json();
 
@@ -59,16 +59,16 @@ export async function PATCH(
             updateData.resolvedAt = new Date();
         }
 
-        const incident = await prisma.incident.update({
+        const report = await prisma.report.update({
             where: { id },
             data: updateData
         });
 
-        logAudit("TASK_UPDATED", "Incident", incident.id, session.sub, {
+        logAudit("REPORT_UPDATED", "Report", report.id, session.sub, {
             changes: updateData
         });
 
-        return NextResponse.json(incident);
+        return NextResponse.json(report);
     } catch (error) {
         return handleApiError(error);
     }

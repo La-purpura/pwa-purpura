@@ -13,25 +13,25 @@ type Command = {
     action?: () => void;
     href?: string;
     group: "Navegación" | "Acciones" | "Ayuda";
-    permission?: Permission; // Nuevo campo opcional
+    permission?: Permission;
 };
 
 export function CommandPalette() {
     const { setBroadcastModalOpen } = useAppStore();
-    const { hasPermission } = useRBAC(); // Hook de permisos
+    const { hasPermission } = useRBAC();
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState("");
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
 
-    // Comandos definidos con permisos asociados
     const commands: Command[] = [
         // Navegación
         { id: "nav-dash", label: "Ir al Tablero", icon: "dashboard", href: "/dashboard", group: "Navegación", permission: "territory:view" },
-        { id: "nav-tasks", label: "Ir a Tareas", icon: "check_circle", href: "/tasks", group: "Navegación", permission: "forms:view" },
-        { id: "nav-team", label: "Ir a Equipo", icon: "group", href: "/team", group: "Navegación", permission: "users:view" },
-        { id: "nav-alerts", label: "Ir a Alertas", icon: "notifications", href: "/alerts", group: "Navegación", permission: "incidents:view" },
+        { id: "nav-tasks", label: "Gestión de Tareas", icon: "assignment", href: "/tasks", group: "Navegación", permission: "forms:view" },
+        { id: "nav-reports", label: "Reportes en Territorio", icon: "contract_edit", href: "/reports", group: "Navegación", permission: "reports:view" },
+        { id: "nav-team", label: "Control de Equipo", icon: "group", href: "/team", group: "Navegación", permission: "users:view" },
+        { id: "nav-alerts", label: "Comunicaciones y Alertas", icon: "notifications", href: "/alerts", group: "Navegación", permission: "reports:view" },
 
         // Acciones Rápidas
         {
@@ -43,18 +43,18 @@ export function CommandPalette() {
             permission: "content:publish"
         },
         { id: "act-new-task", label: "Crear Nueva Tarea", icon: "add_task", href: "/tasks/new", group: "Acciones", permission: "forms:create" },
+        { id: "act-new-report", label: "Generar Nuevo Reporte", icon: "add_reaction", href: "/reports/new", group: "Acciones", permission: "reports:create" },
 
         // Ayuda
-        { id: "help-docs", label: "Ver Biblioteca", icon: "library_books", href: "/library", group: "Ayuda", permission: "content:view" },
+        { id: "help-docs", label: "Ver Biblioteca", icon: "library_books", href: "/library", group: "Ayuda", permission: "resources:view" },
+        { id: "help-profile", label: "Editar Mi Perfil", icon: "person", href: "/settings/profile", group: "Ayuda" },
     ];
 
-    // Filtrar comandos por QUERY y por PERMISOS
     const filteredCommands = commands.filter(cmd =>
         cmd.label.toLowerCase().includes(query.toLowerCase()) &&
         (!cmd.permission || hasPermission(cmd.permission))
     );
 
-    // Manejar atajo de teclado global (Ctrl+K / Cmd+K)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -70,7 +70,6 @@ export function CommandPalette() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, []);
 
-    // Foco automático y reset al abrir
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => inputRef.current?.focus(), 50);
@@ -79,7 +78,6 @@ export function CommandPalette() {
         }
     }, [isOpen]);
 
-    // Navegación por teclado dentro de la lista
     const handleListKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "ArrowDown") {
             e.preventDefault();
@@ -103,19 +101,18 @@ export function CommandPalette() {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-start justify-center pt-[15vh] px-4 animate-in fade-in duration-200">
-            {/* Overlay Click to Close */}
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-start justify-center pt-[15vh] px-4 animate-in fade-in duration-300">
             <div className="absolute inset-0" onClick={() => setIsOpen(false)} />
 
-            <div className="w-full max-w-xl bg-white dark:bg-[#20121d] rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 relative overflow-hidden flex flex-col max-h-[60vh] animate-in zoom-in-95 slide-in-from-top-4 duration-200">
+            <div className="w-full max-w-xl bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-gray-800 relative overflow-hidden flex flex-col max-h-[60vh] animate-in zoom-in-95 slide-in-from-top-4 duration-300">
                 {/* Search Header */}
-                <div className="flex items-center px-4 py-4 border-b border-gray-100 dark:border-gray-800">
-                    <span className="material-symbols-outlined text-gray-400 text-2xl mr-3">search</span>
+                <div className="flex items-center px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+                    <span className="material-symbols-outlined text-[#851c74] text-2xl mr-4">bolt</span>
                     <input
                         ref={inputRef}
                         type="text"
-                        placeholder="Escribe un comando o busca..."
-                        className="flex-1 bg-transparent border-none outline-none text-lg text-gray-800 dark:text-white placeholder-gray-400 font-medium"
+                        placeholder="Comando rápido..."
+                        className="flex-1 bg-transparent border-none outline-none text-lg text-gray-800 dark:text-white placeholder-gray-400 font-extrabold uppercase tracking-tight"
                         value={query}
                         onChange={(e) => {
                             setQuery(e.target.value);
@@ -123,13 +120,13 @@ export function CommandPalette() {
                         }}
                         onKeyDown={handleListKeyDown}
                     />
-                    <div className="hidden md:flex items-center gap-1">
-                        <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-500 font-sans font-bold">Esc</kbd>
+                    <div className="hidden md:flex items-center gap-2">
+                        <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-[10px] text-gray-400 font-black uppercase shadow-inner">Esc</kbd>
                     </div>
                 </div>
 
                 {/* Results List */}
-                <div className="overflow-y-auto custom-scrollbar p-2">
+                <div className="overflow-y-auto custom-scrollbar p-3">
                     {filteredCommands.length > 0 ? (
                         <>
                             {["Acciones", "Navegación", "Ayuda"].map((group) => {
@@ -137,12 +134,11 @@ export function CommandPalette() {
                                 if (groupCommands.length === 0) return null;
 
                                 return (
-                                    <div key={group} className="mb-2">
-                                        <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider sticky top-0 bg-white/95 dark:bg-[#20121d]/95 backdrop-blur z-10">
+                                    <div key={group} className="mb-4 last:mb-0">
+                                        <div className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                                             {group}
                                         </div>
                                         {groupCommands.map((cmd) => {
-                                            // Find true index in the flattened filtered list for highlighting
                                             const flatIndex = filteredCommands.indexOf(cmd);
                                             const isActive = flatIndex === selectedIndex;
 
@@ -151,17 +147,17 @@ export function CommandPalette() {
                                                     key={cmd.id}
                                                     onClick={() => runCommand(cmd)}
                                                     onMouseEnter={() => setSelectedIndex(flatIndex)}
-                                                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-100 ${isActive
-                                                        ? "bg-[#851c74] text-white shadow-md shadow-[#851c74]/20"
-                                                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                                    className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-200 ${isActive
+                                                        ? "bg-[#851c74] text-white shadow-xl shadow-purple-900/40 translate-x-1"
+                                                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                                                         }`}
                                                 >
-                                                    <span className={`material-symbols-outlined ${isActive ? "text-white" : "text-gray-400"}`}>
+                                                    <span className={`material-symbols-outlined text-xl ${isActive ? "text-white" : "text-gray-400"}`}>
                                                         {cmd.icon}
                                                     </span>
-                                                    <span className="font-medium">{cmd.label}</span>
-                                                    {cmd.group === "Acciones" && isActive && (
-                                                        <span className="ml-auto text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-bold">Enter</span>
+                                                    <span className="font-extrabold uppercase text-[11px] tracking-widest">{cmd.label}</span>
+                                                    {isActive && (
+                                                        <span className="ml-auto text-[9px] bg-white/20 px-2 py-1 rounded-lg text-white font-black uppercase tracking-tighter animate-pulse">Confirmar</span>
                                                     )}
                                                 </button>
                                             );
@@ -171,18 +167,18 @@ export function CommandPalette() {
                             })}
                         </>
                     ) : (
-                        <div className="py-12 text-center text-gray-400">
-                            <span className="material-symbols-outlined text-4xl mb-2 opacity-50">search_off</span>
-                            <p>No se encontraron comandos para "{query}"</p>
+                        <div className="py-16 text-center text-gray-400">
+                            <span className="material-symbols-outlined text-5xl mb-4 opacity-20">search_off</span>
+                            <p className="font-black uppercase text-[10px] tracking-widest">Sin coincidencias para "{query}"</p>
                         </div>
                     )}
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-900/50 px-4 py-2 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center text-xs text-gray-400">
-                    <p>La Púrpura Command Center</p>
-                    <div className="flex gap-3">
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[10px]">arrow_upward</span><span className="material-symbols-outlined text-[10px]">arrow_downward</span> Navegar</span>
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[10px]">keyboard_return</span> Seleccionar</span>
+                <div className="bg-gray-50 dark:bg-gray-900/50 px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Púrpura OS v2.0</p>
+                    <div className="flex gap-4">
+                        <span className="flex items-center gap-1 group"><span className="material-symbols-outlined text-xs text-[#851c74]">keyboard_arrow_up</span><span className="material-symbols-outlined text-xs text-[#851c74]">keyboard_arrow_down</span> <span className="text-[9px] font-black uppercase tracking-tighter text-gray-500">Navegar</span></span>
+                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs text-[#851c74]">keyboard_return</span> <span className="text-[9px] font-black uppercase tracking-tighter text-gray-500">Ejecutar</span></span>
                     </div>
                 </div>
             </div>
