@@ -2,10 +2,11 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+
+// Re-importing types from fixtures (now only for types, data is DB-driven)
 import {
-  User, Task, Incident, Alert, Kpis, Draft, Project, News, Report,
-  mockUserRegular, mockTasks, mockIncidents, mockAlerts, mockKpis, mockDrafts, mockProjects, mockNews, mockUsers, mockReports
-} from "./mocks";
+  User, Task, Incident, Alert, Kpis, Draft, Project, Report
+} from "./types";
 
 // Announcement Types
 export interface Announcement {
@@ -33,9 +34,6 @@ interface AppState {
   setAlerts: (alerts: Alert[]) => void;
   addAlert: (alert: Alert) => void;
   markAlertAsRead: (id: string) => void;
-
-  news: News[];
-  addNews: (news: News) => void;
 
   reports: Report[];
 
@@ -73,7 +71,7 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      // Auth
+      // Auth: Always starts null until login or hydrated
       user: null,
       setUser: (user) => set({ user }),
       logout: async () => {
@@ -82,12 +80,11 @@ export const useAppStore = create<AppState>()(
           set({ user: null });
         } catch (error) {
           console.error("Logout failed:", error);
-          // Opcionalmente limpiar el estado local de todos modos
           set({ user: null });
         }
       },
 
-      // Collections
+      // Collections: Always empty initially, populated by API
       tasks: [],
       setTasks: (tasks) => set({ tasks }),
       addTask: (task) => set((state) => ({ tasks: [task, ...state.tasks] })),
@@ -102,9 +99,6 @@ export const useAppStore = create<AppState>()(
       markAlertAsRead: (id) => set((state) => ({
         alerts: state.alerts.map((a) => a.id === id ? { ...a, isRead: true } : a)
       })),
-
-      news: [],
-      addNews: (news) => set((state) => ({ news: [news, ...state.news] })),
 
       reports: [],
 
@@ -124,7 +118,7 @@ export const useAppStore = create<AppState>()(
       removeFromOfflineQueue: (id) => set((state) => ({ offlineQueue: state.offlineQueue.filter((i) => i.id !== id) })),
       clearOfflineQueue: () => set({ offlineQueue: [] }),
 
-      // KPIs
+      // KPIs: Real 0 initially
       kpis: {
         activeAlerts: 0,
         pendingTasks: 0,

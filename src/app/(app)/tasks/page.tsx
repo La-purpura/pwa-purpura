@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
+import { EmptyState } from "@/components/common/EmptyState";
 
 type Task = {
   id: string;
@@ -98,9 +99,19 @@ export default function TasksPage() {
       {loading ? (
         <div className="py-20 text-center text-gray-500 font-bold animate-pulse">Sincronizando tareas...</div>
       ) : tasks.length === 0 ? (
-        <div className="py-20 text-center bg-gray-50 dark:bg-gray-800/20 rounded-[2.5rem] border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <p className="text-gray-400 font-bold italic">No hay tareas programadas.</p>
-        </div>
+        <EmptyState
+          icon="assignment_late"
+          title="No hay tareas"
+          description="Aún no se han programado tareas para este envío o filtro."
+          action={
+            <button
+              onClick={() => router.push('/new-task')}
+              className="bg-[#851c74] text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-purple-900/20"
+            >
+              Crear Primera Tarea
+            </button>
+          }
+        />
       ) : (
         <div className="space-y-8">
           {highPriority.length > 0 && (

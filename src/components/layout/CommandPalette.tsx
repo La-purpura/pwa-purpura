@@ -32,7 +32,6 @@ export function CommandPalette() {
         { id: "nav-tasks", label: "Ir a Tareas", icon: "check_circle", href: "/tasks", group: "Navegación", permission: "forms:view" },
         { id: "nav-team", label: "Ir a Equipo", icon: "group", href: "/team", group: "Navegación", permission: "users:view" },
         { id: "nav-alerts", label: "Ir a Alertas", icon: "notifications", href: "/alerts", group: "Navegación", permission: "incidents:view" },
-        { id: "nav-profile", label: "Mi Perfil", icon: "person", href: "/profile", group: "Navegación" },
 
         // Acciones Rápidas
         {
@@ -41,16 +40,12 @@ export function CommandPalette() {
             icon: "campaign",
             action: () => setBroadcastModalOpen(true),
             group: "Acciones",
-            permission: "content:publish" // Solo los que pueden publicar
+            permission: "content:publish"
         },
-        { id: "act-new-task", label: "Crear Nueva Tarea", icon: "add_task", href: "/tasks/create", group: "Acciones", permission: "forms:create" },
-        { id: "act-new-alert", label: "Programar Alerta", icon: "notification_add", href: "/alerts/schedule", group: "Acciones", permission: "incidents:create" },
-        { id: "act-new-msg", label: "Nueva Comunicación", icon: "campaign", href: "/news/create", group: "Acciones", permission: "content:publish" },
-        { id: "act-receipt", label: "Generar Comprobante", icon: "receipt_long", href: "/documents/receipts", group: "Acciones", permission: "documents:upload" },
+        { id: "act-new-task", label: "Crear Nueva Tarea", icon: "add_task", href: "/tasks/new", group: "Acciones", permission: "forms:create" },
 
         // Ayuda
         { id: "help-docs", label: "Ver Biblioteca", icon: "library_books", href: "/library", group: "Ayuda", permission: "content:view" },
-        { id: "help-support", label: "Soporte Técnico", icon: "support_agent", href: "/help", group: "Ayuda" },
     ];
 
     // Filtrar comandos por QUERY y por PERMISOS
@@ -157,8 +152,8 @@ export function CommandPalette() {
                                                     onClick={() => runCommand(cmd)}
                                                     onMouseEnter={() => setSelectedIndex(flatIndex)}
                                                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-100 ${isActive
-                                                            ? "bg-[#851c74] text-white shadow-md shadow-[#851c74]/20"
-                                                            : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                                        ? "bg-[#851c74] text-white shadow-md shadow-[#851c74]/20"
+                                                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                                                         }`}
                                                 >
                                                     <span className={`material-symbols-outlined ${isActive ? "text-white" : "text-gray-400"}`}>

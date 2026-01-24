@@ -57,10 +57,7 @@ export default function AppLayoutClient({ children }: { children: React.ReactNod
         if (pathname.startsWith("/tasks")) return { title: "Relevamientos", subtitle: "Operación de Campo" };
         if (pathname.startsWith("/alerts")) return { title: "Centro de Alertas", subtitle: "Monitoreo Territorial" };
         if (pathname.startsWith("/team")) return { title: "Mi Equipo", subtitle: "Red de Territorio" };
-        if (pathname.startsWith("/profile")) return { title: "Mi Perfil", subtitle: user.name };
         if (pathname.startsWith("/settings")) return { title: "Configuración", subtitle: "Ajustes de la PWA" };
-        if (pathname.startsWith("/news")) return { title: "Novedades", subtitle: "Módulo de Comunicación" };
-        if (pathname.startsWith("/map")) return { title: "Mapa en Tiempo Real", subtitle: "Vista Territorial" };
         if (pathname.includes("dashboard")) return { title: "Dashboard Administrativo", subtitle: "Gestión E2" };
         if (pathname.includes("home")) return { title: "Territorio", subtitle: user.territory };
 

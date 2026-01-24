@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 import { isValidTransition, canApprove } from "@/lib/projects";
-import { ProjectStatus } from "@/lib/mocks";
+import { ProjectStatus } from "@/lib/types";
 
 /**
  * POST /api/projects/:id/status

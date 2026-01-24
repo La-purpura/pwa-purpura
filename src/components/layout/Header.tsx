@@ -47,10 +47,10 @@ export function Header({ title, subtitle, showBack }: HeaderProps) {
                         <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">notifications</span>
                     </Link>
                     <Link
-                        href="/profile"
+                        href="/settings"
                         className="flex size-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
-                        <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">account_circle</span>
+                        <span className="material-symbols-outlined text-gray-600 dark:text-gray-300">person</span>
                     </Link>
                 </div>
             </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRBAC } from "@/hooks/useRBAC";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<any[]>([]);
@@ -138,8 +139,12 @@ export default function ProjectsPage() {
                     ))}
 
                     {filteredProjects.length === 0 && (
-                        <div className="col-span-full py-20 text-center text-gray-400 italic">
-                            No se encontraron proyectos activos.
+                        <div className="col-span-full">
+                            <EmptyState
+                                icon="folder_off"
+                                title="Sin Proyectos"
+                                description="No se encontraron proyectos activos que coincidan con los filtros seleccionados."
+                            />
                         </div>
                     )}
                 </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRBAC } from "@/hooks/useRBAC";
 import { HierarchicalTerritorySelector } from "@/components/common/HierarchicalTerritorySelector";
+import { EmptyState } from "@/components/common/EmptyState";
 
 interface Resource {
     id: string;
@@ -111,8 +112,8 @@ export default function LibraryPage() {
                                 key={cat.id}
                                 onClick={() => setActiveCategory(cat.id)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === cat.id
-                                        ? 'bg-white dark:bg-gray-700 text-[#851c74] shadow-sm'
-                                        : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                                    ? 'bg-white dark:bg-gray-700 text-[#851c74] shadow-sm'
+                                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-sm">{cat.icon}</span>
@@ -139,8 +140,12 @@ export default function LibraryPage() {
                     {loading ? (
                         <div className="col-span-full py-20 text-center animate-pulse text-gray-400 font-bold">Cargando recursos...</div>
                     ) : resources.length === 0 ? (
-                        <div className="col-span-full py-20 text-center bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] border-2 border-dashed border-gray-100 dark:border-gray-800">
-                            <p className="text-gray-400 italic font-bold">Sin resultados.</p>
+                        <div className="col-span-full">
+                            <EmptyState
+                                icon="auto_stories"
+                                title="Sin resultados"
+                                description="No hemos encontrado recursos que coincidan con tu búsqueda."
+                            />
                         </div>
                     ) : (
                         resources.map(res => (
