@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
+import { validateTransition, REQUEST_TRANSITIONS, RequestStatus, WorkflowError } from "@/lib/workflow";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,6 +18,7 @@ export async function POST(
     try {
         const session = await requirePermission('forms:approve');
         const { id } = params;
+        const { reason } = await request.json().catch(() => ({ reason: undefined }));
 
         const scopeFilter = await enforceScope(session);
 
@@ -29,17 +31,33 @@ export async function POST(
 
         if (!existing) return NextResponse.json({ error: "Solicitud no encontrada o fuera de alcance" }, { status: 404 });
 
+        // Workflow Validation
+        try {
+            validateTransition(existing.status as RequestStatus, 'approved', REQUEST_TRANSITIONS, reason);
+        } catch (e) {
+            if (e instanceof WorkflowError) {
+                return NextResponse.json({ error: e.message }, { status: 400 });
+            }
+            throw e;
+        }
+
         const updated = await prisma.request.update({
             where: { id },
-            data: { status: 'approved' }
+            data: {
+                status: 'approved',
+                feedback: reason // Store approval notes in feedback
+            }
         });
 
-        logAudit("REQUEST_APPROVED", "Request", id, session.sub, { oldStatus: existing.status });
+        logAudit("REQUEST_APPROVED", "Request", id, session.sub, {
+            oldStatus: existing.status,
+            reason
+        });
 
         await createNotification(
             existing.submittedById,
             "Solicitud Aprobada",
-            `Tu solicitud ha sido aprobada.`,
+            "Tu solicitud ha sido aprobada.",
             "success",
             { requestId: id }
         );

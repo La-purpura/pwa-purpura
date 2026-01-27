@@ -18,11 +18,13 @@ export async function GET(request: Request) {
         const actorId = searchParams.get('actorId');
         const action = searchParams.get('action');
         const entity = searchParams.get('entity');
+        const entityId = searchParams.get('entityId');
 
         const where: any = {};
         if (actorId) where.actorId = actorId;
         if (action) where.action = action;
         if (entity) where.entity = entity;
+        if (entityId) where.entityId = entityId;
 
         const [logs, total] = await Promise.all([
             prisma.auditLog.findMany({
