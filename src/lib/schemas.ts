@@ -16,6 +16,7 @@ export const UserCreateSchema = z.object({
     role: z.string(),
     territoryId: z.string().optional().nullable(),
     branchId: z.string().optional().nullable(),
+    scopeIds: z.array(z.string()).optional(),
     password: z.string().min(6).optional()
 });
 

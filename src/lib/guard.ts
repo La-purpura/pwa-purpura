@@ -5,6 +5,9 @@ import { ZodError } from "zod";
 import { headers } from "next/headers";
 import * as Sentry from "@sentry/nextjs";
 import { Logger } from "@/lib/logger";
+import { getUserEffectiveTerritoryIds } from "@/lib/scopes";
+
+// ... imports ...
 
 export class AuthError extends Error {
     constructor(message: string) {
@@ -47,6 +50,7 @@ export async function requirePermission(permission: Permission) {
 /**
  * enforceScope
  * Genera un objeto de filtro para Prisma basado en el alcance territorial y de rama del usuario.
+ * Soporta jerarquía y scopes múltiples.
  */
 export async function enforceScope(
     session: any,
@@ -64,20 +68,26 @@ export async function enforceScope(
 
     const conditions: any[] = [];
 
-    // 1. Territorios
-    if (territory && session.territoryId) {
+    // 1. Territorios (Multiscope + Hierarchy)
+    if (territory) {
+        // Obtenemos todos los IDs válidos para este usuario (Root scopes + Descendientes)
+        const validTerritoryIds = await getUserEffectiveTerritoryIds(session.sub);
+
+        // Si no tiene territorios asignados (y no es superadmin), quizás solo ve globales o nada?
+        // Asumimos que si validIds está vacío, solo ve items sin territorio (Globales).
+
         if (isMany) {
             conditions.push({
                 OR: [
-                    { [relationName]: { none: {} } }, // Global
-                    { [relationName]: { some: { territoryId: session.territoryId } } } // Su territorio
+                    { [relationName]: { none: {} } }, // Global items (assigned to no territory)
+                    { [relationName]: { some: { territoryId: { in: validTerritoryIds } } } }
                 ]
             });
         } else {
             conditions.push({
                 OR: [
-                    { territoryId: null },
-                    { territoryId: session.territoryId }
+                    { territoryId: null }, // Global
+                    { territoryId: { in: validTerritoryIds } }
                 ]
             });
         }

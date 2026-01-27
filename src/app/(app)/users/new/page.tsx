@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -14,19 +14,34 @@ export default function UserNewPage() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [territory, setTerritory] = useState("");
+  const [scopes, setScopes] = useState<string[]>([]);
+  const [availableTerritories, setAvailableTerritories] = useState<{ id: string, name: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/territories')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setAvailableTerritories(data);
+      })
+      .catch(console.error);
+  }, []);
 
   const handleSubmit = () => {
     const safeName = name.trim();
     const safeEmail = email.trim();
     if (!safeName || !safeEmail || !role) {
+      alert("Por favor completa los campos requeridos");
       return;
     }
 
     // Map basic UI roles to system RBAC roles
-    let systemRole: any = "Militante";
+    let systemRole: any = role;
     if (role === "Administrador") systemRole = "AdminNacional";
     if (role === "Supervisor") systemRole = "Coordinador";
     if (role === "Operador") systemRole = "Colaborador";
+    if (role === "Militante") systemRole = "Militante";
+
+    const selectedTerritoryName = availableTerritories.find(t => t.id === territory)?.name || "Nacional";
 
     // Optimistic UI update
     addUser({
@@ -35,7 +50,9 @@ export default function UserNewPage() {
       email: safeEmail,
       role: systemRole, // Use valid Role type
       status: 'ACTIVE',
-      territory: territory || "Nacional",
+      territory: selectedTerritoryName,
+      // @ts-ignore: Optimistic update simplified
+      branch: "General",
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(safeName)}&background=random`
     });
 
@@ -46,13 +63,24 @@ export default function UserNewPage() {
         name: safeName,
         email: safeEmail,
         role: systemRole,
-        territoryId: null, // Basic implementation lacks territory ID selection yet
+        territoryId: territory || null,
+        scopeIds: scopes,
         branchId: null
       }),
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json();
+        alert("Error: " + (err.error || "Desconocido"));
+      } else {
+        router.push("/users");
+      }
     }).catch(() => null);
-
-    router.push("/users");
   };
+
+  const territoryOptions = [
+    { label: "Sin territorio (Nacional)", value: "" },
+    ...availableTerritories.map(t => ({ label: t.name, value: t.id }))
+  ];
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-manrope">
@@ -114,25 +142,42 @@ export default function UserNewPage() {
                 onChange={setRole}
                 options={[
                   { label: "Seleccionar rol", value: "", disabled: true },
-                  { label: "Administrador", value: "Administrador" },
-                  { label: "Operador de Campo", value: "Operador" },
-                  { label: "Supervisor Regional", value: "Supervisor" },
+                  { label: "Administrador (Nacional)", value: "Administrador" },
+                  { label: "Supervisor (Coordinador)", value: "Supervisor" },
+                  { label: "Colaborador (Operador)", value: "Operador" },
+                  { label: "Militante", value: "Militante" },
                 ]}
               />
               <SelectField
-                label="Territorio Asignado"
+                label="Territorio Principal"
                 value={territory}
                 onChange={setTerritory}
-                options={[
-                  { label: "Seleccionar zona", value: "", disabled: true },
-                  { label: "Zona Norte", value: "Zona Norte" },
-                  { label: "Zona Sur", value: "Zona Sur" },
-                  { label: "Zona Este", value: "Zona Este" },
-                  { label: "Zona Oeste", value: "Zona Oeste" },
-                  { label: "Centro Historico", value: "Centro Historico" },
-                ]}
+                options={territoryOptions}
                 icon="map"
               />
+
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 pl-1">
+                  Scopes Adicionales
+                </span>
+                <div className="bg-gray-50 dark:bg-[#21242c] rounded-xl border border-input-border dark:border-gray-600 p-2 max-h-40 overflow-y-auto">
+                  {availableTerritories.map(t => (
+                    <label key={t.id} className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={scopes.includes(t.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setScopes([...scopes, t.id]);
+                          else setScopes(scopes.filter(id => id !== t.id));
+                        }}
+                        className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+                      />
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-300">{t.name}</span>
+                    </label>
+                  ))}
+                  {availableTerritories.length === 0 && <span className="text-sm text-gray-400 p-2">Cargando territorios...</span>}
+                </div>
+              </div>
             </div>
           </section>
 

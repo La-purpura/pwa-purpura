@@ -22,6 +22,7 @@ model Territory {
   parent             Territory?         @relation("Hierarchy", fields: [parentId], references: [id])
   children           Territory[]        @relation("Hierarchy")
   users              User[]
+  userScopes         UserScope[]
 }
 
 model Branch {
@@ -61,7 +62,17 @@ model User {
   readAlerts        AlertRead[]
   branch            Branch?      @relation(fields: [branchId], references: [id])
   territory         Territory?   @relation(fields: [territoryId], references: [id])
+  scopes            UserScope[]
   notifications     Notification[]
+}
+
+model UserScope {
+  userId      String
+  territoryId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  territory   Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, territoryId])
 }
 
 model Notification {

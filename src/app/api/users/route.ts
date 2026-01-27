@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       return handleApiError(result.error);
     }
 
-    const { email, role, name, territoryId, branchId, password } = result.data;
+    const { email, role, name, territoryId, branchId, password, scopeIds } = result.data;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -79,14 +79,18 @@ export async function POST(request: Request) {
         passwordHash: hashedPassword,
         status: "ACTIVE",
         territoryId: territoryId || null,
-        branchId: branchId || null
+        branchId: branchId || null,
+        scopes: scopeIds && scopeIds.length > 0 ? {
+          create: scopeIds.map(tid => ({ territoryId: tid }))
+        } : undefined
       }
     });
 
     logAudit("USER_CREATED", "User", newUser.id, session.sub, {
       email,
       role,
-      assignedTerritory: territoryId
+      assignedTerritory: territoryId,
+      scopes: scopeIds
     });
 
     const response = NextResponse.json({
