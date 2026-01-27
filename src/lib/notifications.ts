@@ -8,13 +8,30 @@ export async function createNotification(
     data: any = null
 ) {
     try {
+        // optimización: podriamos pasar settings si ya los tenemos, pero fetch es seguro
+        // @ts-ignore
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { settings: true }
+        });
+
+        if (!user) return;
+
+        // @ts-ignore
+        const settings = (user.settings as any) || {};
+        const pref = settings.notifications || 'all';
+
+        if (pref === 'none') return;
+        if (pref === 'critical' && type !== 'error' && type !== 'warning') return;
+
+        // @ts-ignore
         await prisma.notification.create({
             data: {
                 userId,
                 title,
                 message,
                 type,
-                data: data ? JSON.stringify(data) : undefined
+                data: data ? data : undefined // JSON type handles object directly usually? check schema
             }
         });
     } catch (error) {

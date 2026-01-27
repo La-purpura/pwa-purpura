@@ -44,6 +44,7 @@ model User {
   role              String
   branchId          String?
   territoryScope    Json?
+  settings          Json?    // { notifications: 'all' | 'critical' | 'none' }
   status            String       @default("ACTIVE")
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt

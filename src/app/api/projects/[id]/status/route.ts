@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 import { validateTransition, PROJECT_TRANSITIONS, ProjectStatus, WorkflowError } from "@/lib/workflow";
+import { createNotification } from "@/lib/notifications";
 // import { ProjectStatus } from "@/lib/types"; // Remove old type
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export async function POST(
         // 1. Obtener proyecto actual con filtro de alcance
         const project = await prisma.project.findFirst({
             where: { id, ...scopeFilter },
-            select: { status: true, leaderId: true }
+            select: { status: true, leaderId: true, title: true }
         });
 
         if (!project) return NextResponse.json({ error: "Proyecto no encontrado o fuera de alcance" }, { status: 404 });
@@ -58,6 +59,21 @@ export async function POST(
             to: nextStatus,
             reason
         });
+
+        // Notificar al Líder
+        if (project.leaderId) {
+            let notifType: 'info' | 'success' | 'warning' = 'info';
+            if (nextStatus === 'completed') notifType = 'success';
+            if (nextStatus === 'cancelled') notifType = 'warning';
+
+            await createNotification(
+                project.leaderId,
+                "Estado de Proyecto Actualizado",
+                `El proyecto "${project.title}" ha cambiado a estado: ${nextStatus}.`,
+                notifType,
+                { projectId: id, newStatus: nextStatus }
+            );
+        }
 
         return NextResponse.json(updated);
 
