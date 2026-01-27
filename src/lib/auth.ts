@@ -14,6 +14,7 @@ export type SessionPayload = {
     sid: string;  // Session ID in DB
     territoryId?: string;
     branchId?: string;
+    twoFactorVerified?: boolean;
     iat?: number;
     exp?: number;
 };

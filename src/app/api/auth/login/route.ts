@@ -5,6 +5,7 @@ import { createSessionCookie } from "@/lib/auth";
 import { z } from "zod";
 import { handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { rateLimit } from "@/lib/rate-limit";
+import { verifyTwoFactorToken } from "@/lib/twofactor";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -12,17 +13,20 @@ export const runtime = 'nodejs';
 const LoginSchema = z.object({
     identifier: z.string().email().optional(),
     email: z.string().email().optional(),
-    password: z.string().min(6)
+    password: z.string().min(6),
+    twoFactorCode: z.string().min(6).optional()
 }).refine(data => data.identifier || data.email, {
     message: "Debe proporcionar un email",
     path: ["identifier"]
 });
 
+const CRITICAL_ROLES = ['SuperAdminNacional', 'AdminProvincial', 'CoordinadorRegional'];
+
 export async function POST(request: Request) {
     try {
         // 1. Rate Limiting (Brute Force Protection)
         const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
-        const limiter = rateLimit(ip, { limit: 5, windowMs: 60 * 1000 }); // 5 attempts per minute
+        const limiter = rateLimit(ip, { limit: 10, windowMs: 60 * 1000 }); // Increased slightly for 2FA steps
 
         if (!limiter.success) {
             return applySecurityHeaders(
@@ -41,8 +45,10 @@ export async function POST(request: Request) {
 
         const email = (result.data.identifier || result.data.email) as string;
         const password = result.data.password;
+        const twoFactorCode = result.data.twoFactorCode;
 
         // 3. User Lookup
+        // @ts-ignore
         const user = await prisma.user.findUnique({
             where: { email },
             include: { territory: true, branch: true }
@@ -51,17 +57,6 @@ export async function POST(request: Request) {
         // Constant time comparison placeholder if user not found
         if (!user) {
             await bcrypt.compare("fake", "$2a$10$fakehashfakehashfakehashfakehashfakehash");
-            // Audit Log Failure (Anonymous)
-            await prisma.auditLog.create({
-                data: {
-                    action: 'LOGIN_FAILURE',
-                    entity: 'User',
-                    entityId: 'anonymous',
-                    actorId: 'anonymous',
-                    metadata: JSON.stringify({ email, ip, reason: 'user_not_found' })
-                }
-            });
-
             return applySecurityHeaders(
                 NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 }),
                 { noStore: true }
@@ -76,7 +71,7 @@ export async function POST(request: Request) {
         const isValid = await bcrypt.compare(password, user.passwordHash);
 
         if (!isValid) {
-            // Audit Log Failure (Identified)
+            // Audit Log Failure
             await prisma.auditLog.create({
                 data: {
                     action: 'LOGIN_FAILURE',
@@ -101,23 +96,58 @@ export async function POST(request: Request) {
             );
         }
 
-        // 6. Create Session
+        // 6. 2FA Verification
+        // @ts-ignore
+        const is2faEnabled = user.twoFactorEnabled;
+        // @ts-ignore
+        const secret = user.twoFactorSecret;
+        let requiresSetup = false;
+        let verified = false;
+
+        if (is2faEnabled) {
+            if (!twoFactorCode) {
+                return NextResponse.json({ error: "Código 2FA requerido", code: '2FA_REQUIRED' }, { status: 403 });
+            }
+            if (!secret || !verifyTwoFactorToken(twoFactorCode, secret)) {
+                await prisma.auditLog.create({
+                    data: {
+                        action: 'LOGIN_FAILURE_2FA',
+                        entity: 'User',
+                        entityId: user.id,
+                        actorId: user.id,
+                        metadata: JSON.stringify({ email: user.email, ip })
+                    }
+                });
+                return NextResponse.json({ error: "Código 2FA inválido" }, { status: 401 });
+            }
+            verified = true;
+        } else {
+            if (CRITICAL_ROLES.includes(user.role)) {
+                requiresSetup = true;
+                verified = false; // Not verified, but allowed to login to setup
+            } else {
+                verified = true; // Not required, so effectively verified
+            }
+        }
+
+        // 7. Create Session
         await createSessionCookie({
             sub: user.id,
             email: user.email,
             role: user.role,
             territoryId: user.territoryId || undefined,
-            branchId: user.branchId || undefined
+            branchId: user.branchId || undefined,
+            twoFactorVerified: verified
         });
 
-        // 7. Audit Log
+        // 8. Audit Log
         await prisma.auditLog.create({
             data: {
                 action: 'LOGIN_SUCCESS',
                 entity: 'User',
                 entityId: user.id,
                 actorId: user.id,
-                metadata: JSON.stringify({ email: user.email, role: user.role, ip })
+                metadata: JSON.stringify({ email: user.email, role: user.role, ip, twoFactorEnabled: is2faEnabled })
             }
         });
 
@@ -130,10 +160,14 @@ export async function POST(request: Request) {
                 status: user.status,
                 branchId: user.branchId,
                 branch: user.branch?.name || "Sin rama",
+                // @ts-ignore
                 territoryId: user.territoryId,
+                // @ts-ignore
                 territory: user.territory?.name || "Global",
+                // @ts-ignore
                 territoryScope: user.territoryScope,
-                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "User")}&background=random`
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "User")}&background=random`,
+                requires2faSetup: requiresSetup
             }
         });
 

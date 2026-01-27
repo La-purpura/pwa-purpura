@@ -64,6 +64,8 @@ model User {
   readAlerts        AlertRead[]
   branch            Branch?      @relation(fields: [branchId], references: [id])
   territory         Territory?   @relation(fields: [territoryId], references: [id])
+  twoFactorSecret   String?
+  twoFactorEnabled  Boolean      @default(false)
   scopes            UserScope[]
   notifications     Notification[]
 }
@@ -98,6 +100,9 @@ model Session {
   userId    String
   expiresAt DateTime
   revokedAt DateTime?
+  ipAddress String?
+  userAgent String?
+  lastActive DateTime @default(now())
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
