@@ -61,6 +61,22 @@ model User {
   readAlerts        AlertRead[]
   branch            Branch?      @relation(fields: [branchId], references: [id])
   territory         Territory?   @relation(fields: [territoryId], references: [id])
+  notifications     Notification[]
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info") // info, success, warning, error
+  data      Json?    // Para links o metadatos extra
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
 }
 
 model Session {

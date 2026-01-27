@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requireAuth, enforceScope, handleApiError } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
     try {
@@ -10,15 +11,16 @@ export async function GET(request: Request) {
 
         // 1. Obtener filtros de alcance territorial (M-M)
         const taskScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
-        const reportScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
+        const incidentScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
         const alertScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
         const projectScope = await enforceScope(session, { isMany: true, relationName: 'territories' });
+        const requestScope = await enforceScope(session);
 
         // 2. Ejecutar agregaciones en paralelo
         const [
             tasksCount,
             projectsCount,
-            reportsCount,
+            incidentsCount,
             alertsActive,
             alertsUnread,
             requestsPending,
@@ -36,10 +38,10 @@ export async function GET(request: Request) {
                 where: projectScope,
                 _count: true
             }),
-            // Reports by Status
+            // Incidents by Status
             prisma.report.groupBy({
                 by: ['status'],
-                where: reportScope,
+                where: incidentScope,
                 _count: true
             }),
             // Active Alerts
@@ -58,11 +60,11 @@ export async function GET(request: Request) {
             }),
             // Pending Requests
             prisma.request.count({
-                where: session.role === 'SuperAdminNacional' ? { status: 'pending' } : { territoryId: session.territoryId, status: 'pending' }
+                where: { ...requestScope, status: 'pending' }
             }),
             // Active Users
             prisma.user.count({
-                where: session.role === 'SuperAdminNacional' ? { status: 'ACTIVE' } : { territoryId: session.territoryId, status: 'ACTIVE' }
+                where: { ...requestScope, status: 'ACTIVE' }
             })
         ]);
 
@@ -74,15 +76,15 @@ export async function GET(request: Request) {
             tasks: {
                 total: totalTasks,
                 pending: pendingTasks,
-                byStatus: tasksCount.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {})
+                byStatus: tasksCount.reduce((acc: any, curr: any) => ({ ...acc, [curr.status]: curr._count }), {})
             },
             projects: {
-                total: projectsCount.reduce((acc, curr) => acc + curr._count, 0),
-                byStatus: projectsCount.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {})
+                total: projectsCount.reduce((acc: number, curr: any) => acc + curr._count, 0),
+                byStatus: projectsCount.reduce((acc: any, curr: any) => ({ ...acc, [curr.status]: curr._count }), {})
             },
-            reports: {
-                total: reportsCount.reduce((acc, curr) => acc + curr._count, 0),
-                byStatus: reportsCount.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count }), {})
+            incidents: {
+                total: incidentsCount.reduce((acc: number, curr: any) => acc + curr._count, 0),
+                byStatus: incidentsCount.reduce((acc: any, curr: any) => ({ ...acc, [curr.status]: curr._count }), {})
             },
             alerts: {
                 active: alertsActive,

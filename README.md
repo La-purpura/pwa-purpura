@@ -81,7 +81,12 @@ npx prisma db seed
 npx prisma studio
 ```
 
-### Producción (Supabase)
+### Producción (Neon)
+La aplicación utiliza PostgreSQL en Neon. Para despliegues en Vercel, se recomienda:
+1. Usar el string de conexión con **Pooling** (puerto 5432 o 6543) para evitar agotar conexiones en funciones serverless.
+2. Configurar `DATABASE_URL` en Vercel apuntando a la URL del Pooler.
+3. El cliente Prisma está centralizado en `src/lib/prisma.ts` como singleton para mayor eficiencia.
+
 Ver guía completa en [`DEPLOYMENT.md`](./DEPLOYMENT.md)
 
 ---

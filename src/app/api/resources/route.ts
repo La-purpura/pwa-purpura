@@ -4,6 +4,7 @@ import { requireAuth, requirePermission, enforceScope, handleApiError } from "@/
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/resources

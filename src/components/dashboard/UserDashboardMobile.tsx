@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
-import { CriticalIncidents } from "@/components/dashboard/CriticalIncidents";
+import { CriticalReports } from "@/components/dashboard/CriticalReports";
 
 export default function UserDashboardMobile() {
     const { user } = useAppStore();
@@ -43,7 +43,7 @@ export default function UserDashboardMobile() {
             {/* Acciones Críticas */}
             <section className="grid grid-cols-1 gap-3">
                 <AnnouncementFeed />
-                <CriticalIncidents />
+                <CriticalReports />
             </section>
 
             {/* Acciones Rápidas (Grid 2x2) */}
@@ -54,7 +54,7 @@ export default function UserDashboardMobile() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <QuickAction icon="add_task" label="Nueva Tarea" href="/new-task" color="bg-purple-50 text-[#851c74]" />
-                    <QuickAction icon="report_problem" label="Incidencia" href="/incidents/new" color="bg-orange-50 text-orange-600" />
+                    <QuickAction icon="report_problem" label="Incidencia" href="/reports/new" color="bg-orange-50 text-orange-600" />
                     <QuickAction icon="menu_book" label="Biblioteca" href="/library" color="bg-blue-50 text-blue-600" />
                     <QuickAction icon="cloud_off" label="Modo Offline" href="/offline-queue" color="bg-gray-50 text-gray-600" />
                 </div>

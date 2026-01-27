@@ -51,6 +51,17 @@ export async function POST(request: Request) {
         // Constant time comparison placeholder if user not found
         if (!user) {
             await bcrypt.compare("fake", "$2a$10$fakehashfakehashfakehashfakehashfakehash");
+            // Audit Log Failure (Anonymous)
+            await prisma.auditLog.create({
+                data: {
+                    action: 'LOGIN_FAILURE',
+                    entity: 'User',
+                    entityId: 'anonymous',
+                    actorId: 'anonymous',
+                    metadata: JSON.stringify({ email, ip, reason: 'user_not_found' })
+                }
+            });
+
             return applySecurityHeaders(
                 NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 }),
                 { noStore: true }
@@ -65,6 +76,17 @@ export async function POST(request: Request) {
         const isValid = await bcrypt.compare(password, user.passwordHash);
 
         if (!isValid) {
+            // Audit Log Failure (Identified)
+            await prisma.auditLog.create({
+                data: {
+                    action: 'LOGIN_FAILURE',
+                    entity: 'User',
+                    entityId: user.id,
+                    actorId: user.id,
+                    metadata: JSON.stringify({ email: user.email, ip, reason: 'invalid_password' })
+                }
+            });
+
             return applySecurityHeaders(
                 NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 }),
                 { noStore: true }

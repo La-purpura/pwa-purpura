@@ -42,7 +42,7 @@ export function CommandPalette() {
             group: "Acciones",
             permission: "content:publish"
         },
-        { id: "act-new-task", label: "Crear Nueva Tarea", icon: "add_task", href: "/tasks/new", group: "Acciones", permission: "forms:create" },
+        { id: "act-new-task", label: "Crear Nueva Tarea", icon: "add_task", href: "/new-task", group: "Acciones", permission: "forms:create" },
         { id: "act-new-report", label: "Generar Nuevo Reporte", icon: "add_reaction", href: "/reports/new", group: "Acciones", permission: "reports:create" },
 
         // Ayuda

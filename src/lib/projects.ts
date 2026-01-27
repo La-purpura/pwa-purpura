@@ -1,4 +1,4 @@
-import { ProjectStatus } from "./mocks";
+import { ProjectStatus } from "./types";
 
 /**
  * PROJECT_STATUS_FLOW

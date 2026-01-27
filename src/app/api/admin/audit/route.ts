@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, handleApiError, applySecurityHeaders } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // GET: Fetch audit logs with advanced filtering
 export async function GET(request: Request) {
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
             prisma.auditLog.count({ where })
         ]);
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             logs,
             pagination: {
                 total,
@@ -47,6 +48,8 @@ export async function GET(request: Request) {
                 pages: Math.ceil(total / limit)
             }
         });
+
+        return applySecurityHeaders(response, { noStore: true });
     } catch (error) {
         return handleApiError(error);
     }

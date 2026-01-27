@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 import { isValidTransition, canApprove } from "@/lib/projects";
 import { ProjectStatus } from "@/lib/types";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * POST /api/projects/:id/status
@@ -18,13 +21,15 @@ export async function POST(
         const { id } = params;
         const { status: nextStatus } = await request.json();
 
-        // 1. Obtener proyecto actual
-        const project = await prisma.project.findUnique({
-            where: { id },
+        const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
+
+        // 1. Obtener proyecto actual con filtro de alcance
+        const project = await prisma.project.findFirst({
+            where: { id, ...scopeFilter },
             select: { status: true, leaderId: true }
         });
 
-        if (!project) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+        if (!project) return NextResponse.json({ error: "Proyecto no encontrado o fuera de alcance" }, { status: 404 });
 
         const currentStatus = project.status as ProjectStatus;
 

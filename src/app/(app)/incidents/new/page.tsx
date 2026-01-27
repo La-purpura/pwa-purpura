@@ -6,7 +6,7 @@ import { useRBAC } from "@/hooks/useRBAC";
 import { HierarchicalTerritorySelector } from "@/components/common/HierarchicalTerritorySelector";
 import { apiFetch } from "@/lib/api";
 
-export default function NewReportPage() {
+export default function NewIncidentPage() {
     const router = useRouter();
     const { hasPermission } = useRBAC();
     const [loading, setLoading] = useState(false);
@@ -31,22 +31,22 @@ export default function NewReportPage() {
 
         setLoading(true);
         try {
-            const res = await apiFetch('/api/reports', {
+            const res = await apiFetch('/api/incidents', {
                 method: 'POST',
                 body: formData,
-                title: `Nuevo reporte: ${formData.title}`
+                title: `Nueva incidencia: ${formData.title}`
             });
 
             if (res.ok || res.status === 202) {
-                router.push("/reports");
+                router.push("/incidents");
                 if (res.status === 202) {
-                    alert("Reporte guardado localmente (PWA). Se enviará al recuperar conexión.");
+                    alert("Incidencia guardada localmente (PWA). Se enviará al recuperar conexión.");
                 } else {
-                    alert("Reporte enviado correctamente");
+                    alert("Incidencia enviada correctamente");
                 }
             } else {
                 const err = await res.json();
-                alert(err.error || "Error al enviar el reporte");
+                alert(err.error || "Error al enviar la incidencia");
             }
         } catch (e) {
             alert("Error de conexión");
@@ -64,7 +64,7 @@ export default function NewReportPage() {
                     <span className="material-symbols-outlined">arrow_back</span>
                 </button>
                 <div>
-                    <h1 className="text-2xl font-black">Nuevo Reporte Territorial</h1>
+                    <h1 className="text-2xl font-black">Nueva Incidencia Territorial</h1>
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Información de campo en tiempo real</p>
                 </div>
             </header>
@@ -142,7 +142,7 @@ export default function NewReportPage() {
                     ) : (
                         <>
                             <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">send</span>
-                            CONFIRMAR Y EMITIR REPORTE
+                            CONFIRMAR Y EMITIR INCIDENCIA
                         </>
                     )}
                 </button>

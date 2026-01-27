@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * POST /api/users/:id/enable
@@ -14,6 +17,17 @@ export async function POST(
     try {
         const session = await requirePermission('users:edit');
         const { id } = params;
+
+        const scopeFilter = await enforceScope(session);
+
+        // 1. Verificar existencia y alcance
+        const targetUser = await prisma.user.findFirst({
+            where: { id, ...scopeFilter }
+        });
+
+        if (!targetUser) {
+            return NextResponse.json({ error: "Usuario no encontrado o fuera de alcance" }, { status: 404 });
+        }
 
         await prisma.user.update({
             where: { id },

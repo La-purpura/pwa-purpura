@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /**
- * GET /api/reports
+ * GET /api/incidents
+ * Lista incidencias/reportes con filtros de alcance.
  */
 export async function GET(request: Request) {
   try {
@@ -52,7 +53,8 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST /api/reports
+ * POST /api/incidents
+ * Crea una nueva incidencia.
  */
 export async function POST(request: Request) {
   try {

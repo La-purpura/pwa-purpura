@@ -2,11 +2,12 @@ import { z } from "zod";
 
 export const UserInviteSchema = z.object({
     email: z.string().email("Email inválido"),
-    name: z.string().min(2, "Nombre demasiado corto"),
-    role: z.string(),
-    territoryId: z.string().optional().nullable(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    roleCode: z.string().min(1, "Rol es obligatorio"),
+    territoryScope: z.any().optional(),
     branchId: z.string().optional().nullable(),
-    password: z.string().min(8).optional()
+    expiresHours: z.number().optional().default(48)
 });
 
 export const TaskSchema = z.object({
@@ -36,5 +37,9 @@ export const ProjectSchema = z.object({
     branch: z.string().default("General"),
     type: z.string().default("Operativo"),
     priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
-    territoryIds: z.array(z.string()).optional()
+    territoryIds: z.array(z.string()).optional(),
+    milestones: z.array(z.object({
+        name: z.string().min(1),
+        endDate: z.string().optional().or(z.literal(""))
+    })).optional()
 });

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useRBAC } from "@/hooks/useRBAC";
 
-interface Report {
+interface Incident {
     id: string;
     title: string;
     description: string;
@@ -35,22 +35,22 @@ interface Report {
     };
 }
 
-export default function ReportDetailPage() {
+export default function IncidentDetailPage() {
     const params = useParams();
     const router = useRouter();
     const { hasPermission, user } = useRBAC();
-    const [report, setReport] = useState<Report | null>(null);
+    const [incident, setIncident] = useState<Incident | null>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
 
-    const fetchReport = async () => {
+    const fetchIncident = async () => {
         try {
-            const res = await fetch(`/api/reports/${params.id}`);
+            const res = await fetch(`/api/incidents/${params.id}`);
             if (res.ok) {
                 const data = await res.json();
-                setReport(data);
+                setIncident(data);
             } else {
-                router.push('/reports');
+                router.push('/incidents');
             }
         } catch (error) {
             console.error(error);
@@ -61,21 +61,21 @@ export default function ReportDetailPage() {
 
     useEffect(() => {
         if (params.id) {
-            fetchReport();
+            fetchIncident();
         }
     }, [params.id]);
 
     const updateStatus = async (newStatus: string) => {
-        if (!report) return;
+        if (!incident) return;
         setUpdating(true);
         try {
-            const res = await fetch(`/api/reports/${report.id}`, {
+            const res = await fetch(`/api/incidents/${incident.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
             });
             if (res.ok) {
-                fetchReport();
+                fetchIncident();
             }
         } catch (error) {
             console.error(error);
@@ -117,10 +117,10 @@ export default function ReportDetailPage() {
         );
     }
 
-    if (!report) {
+    if (!incident) {
         return (
             <div className="p-8 text-center">
-                <p className="text-red-500 font-bold">Reporte no encontrado</p>
+                <p className="text-red-500 font-bold">Incidencia no encontrada</p>
             </div>
         );
     }
@@ -137,22 +137,22 @@ export default function ReportDetailPage() {
                 </button>
                 <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase text-white ${getPriorityColor(report.priority)}`}>
-                            {report.priority}
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase text-white ${getPriorityColor(incident.priority)}`}>
+                            {incident.priority}
                         </span>
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase text-white ${getStatusColor(report.status)}`}>
-                            {report.status}
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase text-white ${getStatusColor(incident.status)}`}>
+                            {incident.status}
                         </span>
                     </div>
-                    <h1 className="text-3xl font-black mb-2">{report.title}</h1>
+                    <h1 className="text-3xl font-black mb-2">{incident.title}</h1>
                     <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-[10px] font-bold text-[#851c74]">
-                            {(report.reportedBy.alias || report.reportedBy.name).substring(0, 2).toUpperCase()}
+                            {(incident.reportedBy.alias || incident.reportedBy.name).substring(0, 2).toUpperCase()}
                         </div>
                         <p className="text-gray-500 text-sm">
-                            Reportado por <span className="font-bold">{report.reportedBy.alias || report.reportedBy.name}</span>
-                            {isAdmin && report.reportedBy.alias && <span className="text-xs italic ml-1">(Real: {report.reportedBy.name})</span>}
-                            • {new Date(report.createdAt).toLocaleString()}
+                            Reportado por <span className="font-bold">{incident.reportedBy.alias || incident.reportedBy.name}</span>
+                            {isAdmin && incident.reportedBy.alias && <span className="text-xs italic ml-1">(Real: {incident.reportedBy.name})</span>}
+                            • {new Date(incident.createdAt).toLocaleString()}
                         </p>
                     </div>
                 </div>
@@ -163,18 +163,18 @@ export default function ReportDetailPage() {
                 <div className="lg:col-span-2 space-y-6">
                     {/* Descripción */}
                     <div className="bg-white dark:bg-[#1a1a1a] p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
-                        <h2 className="text-lg font-black mb-4">Descripción del Reporte</h2>
+                        <h2 className="text-lg font-black mb-4">Descripción de la Incidencia</h2>
                         <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap leading-relaxed">
-                            {report.description || "Sin descripción detallada."}
+                            {incident.description || "Sin descripción detallada."}
                         </p>
                     </div>
 
                     {/* Foto */}
-                    {report.photoUrl && (
+                    {incident.photoUrl && (
                         <div className="bg-white dark:bg-[#1a1a1a] p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
                             <h2 className="text-lg font-black mb-4">Evidencia Fotográfica</h2>
                             <img
-                                src={report.photoUrl}
+                                src={incident.photoUrl}
                                 alt="Evidencia"
                                 className="w-full rounded-2xl shadow-lg"
                                 onError={(e) => {
@@ -185,7 +185,7 @@ export default function ReportDetailPage() {
                     )}
 
                     {/* Mapa Simulado/Info Geolocalización */}
-                    {report.latitude && report.longitude && (
+                    {incident.latitude && incident.longitude && (
                         <div className="bg-white dark:bg-[#1a1a1a] p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
                             <h2 className="text-lg font-black mb-4 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-[#851c74]">location_on</span>
@@ -195,13 +195,13 @@ export default function ReportDetailPage() {
                                 <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
                                     <p className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
                                         <span className="material-symbols-outlined text-sm">place</span>
-                                        {report.address || "Dirección no especificada"}
+                                        {incident.address || "Dirección no especificada"}
                                     </p>
                                     <p className="text-[10px] font-bold text-gray-400 mt-2 uppercase">Coordenadas</p>
-                                    <p className="font-mono text-xs">{report.latitude}, {report.longitude}</p>
+                                    <p className="font-mono text-xs">{incident.latitude}, {incident.longitude}</p>
                                 </div>
                                 <a
-                                    href={`https://www.google.com/maps?q=${report.latitude},${report.longitude}`}
+                                    href={`https://www.google.com/maps?q=${incident.latitude},${incident.longitude}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-2 bg-[#851c74] text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg"
@@ -221,7 +221,7 @@ export default function ReportDetailPage() {
                         <div className="bg-[#851c74] p-8 rounded-[2.5rem] text-white shadow-xl">
                             <h2 className="text-lg font-black mb-4">Gestión Operativa</h2>
                             <div className="space-y-3">
-                                {report.status === 'PENDING' && (
+                                {incident.status === 'PENDING' && (
                                     <button
                                         onClick={() => updateStatus('IN_PROGRESS')}
                                         disabled={updating}
@@ -230,7 +230,7 @@ export default function ReportDetailPage() {
                                         Iniciar Resolución
                                     </button>
                                 )}
-                                {report.status === 'IN_PROGRESS' && (
+                                {incident.status === 'IN_PROGRESS' && (
                                     <button
                                         onClick={() => updateStatus('RESOLVED')}
                                         disabled={updating}
@@ -239,7 +239,7 @@ export default function ReportDetailPage() {
                                         Marcar como Resuelto
                                     </button>
                                 )}
-                                {(report.status === 'RESOLVED' || report.status === 'IN_PROGRESS') && (
+                                {(incident.status === 'RESOLVED' || incident.status === 'IN_PROGRESS') && (
                                     <button
                                         onClick={() => updateStatus('CLOSED')}
                                         disabled={updating}
@@ -259,13 +259,13 @@ export default function ReportDetailPage() {
                         <div className="space-y-4">
                             <div>
                                 <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Categoría</p>
-                                <p className="font-bold text-sm bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block">{report.category}</p>
+                                <p className="font-bold text-sm bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block">{incident.category}</p>
                             </div>
 
-                            {report.territory && (
+                            {incident.territory && (
                                 <div>
                                     <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Territorio</p>
-                                    <p className="font-bold text-sm">{report.territory.name}</p>
+                                    <p className="font-bold text-sm">{incident.territory.name}</p>
                                 </div>
                             )}
 
@@ -274,22 +274,22 @@ export default function ReportDetailPage() {
                                 <div className="space-y-3 mt-3">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-[10px] font-bold text-[#851c74]">
-                                            {(report.reportedBy.alias || report.reportedBy.name).substring(0, 2).toUpperCase()}
+                                            {(incident.reportedBy.alias || incident.reportedBy.name).substring(0, 2).toUpperCase()}
                                         </div>
                                         <div>
-                                            <p className="font-bold text-[11px] leading-none mb-1">{report.reportedBy.alias || report.reportedBy.name}</p>
-                                            <p className="text-[10px] text-gray-400 uppercase font-black">{report.reportedBy.role}</p>
+                                            <p className="font-bold text-[11px] leading-none mb-1">{incident.reportedBy.alias || incident.reportedBy.name}</p>
+                                            <p className="text-[10px] text-gray-400 uppercase font-black">{incident.reportedBy.role}</p>
                                         </div>
                                     </div>
 
-                                    {report.assignedTo && (
+                                    {incident.assignedTo && (
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-[10px] font-bold text-blue-600">
-                                                {(report.assignedTo.alias || report.assignedTo.name).substring(0, 2).toUpperCase()}
+                                                {(incident.assignedTo.alias || incident.assignedTo.name).substring(0, 2).toUpperCase()}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-[11px] leading-none mb-1">{report.assignedTo.alias || report.assignedTo.name}</p>
-                                                <p className="text-[10px] text-gray-400 uppercase font-black">{report.assignedTo.role}</p>
+                                                <p className="font-bold text-[11px] leading-none mb-1">{incident.assignedTo.alias || incident.assignedTo.name}</p>
+                                                <p className="text-[10px] text-gray-400 uppercase font-black">{incident.assignedTo.role}</p>
                                             </div>
                                         </div>
                                     )}
@@ -302,12 +302,12 @@ export default function ReportDetailPage() {
                     <div className="bg-white dark:bg-[#1a1a1a] p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm">
                         <h2 className="text-lg font-black mb-6">Auditoría</h2>
                         <div className="space-y-6">
-                            <AuditItem label="Reporte Generado" date={report.createdAt} icon="add_circle" active />
-                            {report.status !== 'PENDING' && (
-                                <AuditItem label="Actualización" date={report.updatedAt} icon="update" active />
+                            <AuditItem label="Incidencia Generada" date={incident.createdAt} icon="add_circle" active />
+                            {incident.status !== 'PENDING' && (
+                                <AuditItem label="Actualización" date={incident.updatedAt} icon="update" active />
                             )}
-                            {report.resolvedAt && (
-                                <AuditItem label="Resolución Finalizada" date={report.resolvedAt} icon="verified" active color="text-green-500" />
+                            {incident.resolvedAt && (
+                                <AuditItem label="Resolución Finalizada" date={incident.resolvedAt} icon="verified" active color="text-green-500" />
                             )}
                         </div>
                     </div>

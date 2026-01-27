@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-// GET: Get report details
+// GET: Obtener detalles de la incidencia
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
@@ -14,8 +15,13 @@ export async function GET(
         const session = await requirePermission('reports:view');
         const { id } = params;
 
-        const report = await prisma.report.findUnique({
-            where: { id },
+        const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
+
+        const report = await prisma.report.findFirst({
+            where: {
+                id,
+                ...scopeFilter
+            },
             include: {
                 reportedBy: {
                     select: { name: true, alias: true, email: true, role: true }
@@ -30,7 +36,7 @@ export async function GET(
         });
 
         if (!report) {
-            return NextResponse.json({ error: "Reporte no encontrado" }, { status: 404 });
+            return NextResponse.json({ error: "Incidencia no encontrada o sin acceso" }, { status: 404 });
         }
 
         return NextResponse.json(report);
@@ -39,7 +45,7 @@ export async function GET(
     }
 }
 
-// PATCH: Update report (status, assignment, etc.)
+// PATCH: Actualizar incidencia (estado, asignación, etc.)
 export async function PATCH(
     request: Request,
     { params }: { params: { id: string } }

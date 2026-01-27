@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * POST /api/users/:id/revoke
@@ -15,7 +18,17 @@ export async function POST(
         const session = await requirePermission('users:revoke');
         const { id } = params;
 
-        // 1. Evitar auto-revocación accidental (opcional, pero recomendado)
+        const scopeFilter = await enforceScope(session);
+
+        // 1. Verificar existencia y alcance
+        const targetUser = await prisma.user.findFirst({
+            where: { id, ...scopeFilter }
+        });
+
+        if (!targetUser) {
+            return NextResponse.json({ error: "Usuario no encontrado o fuera de alcance" }, { status: 404 });
+        }
+
         if (id === session.sub) {
             return NextResponse.json({ error: "No puedes revocarte a ti mismo" }, { status: 400 });
         }

@@ -37,12 +37,13 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
 
         const sessionPayload = payload as unknown as SessionPayload;
 
-        // Verificar en DB
+        // Verificar en DB (Sesión y Usuario)
         const dbSession = await prisma.session.findUnique({
-            where: { id: sessionPayload.sid }
+            where: { id: sessionPayload.sid },
+            include: { user: { select: { status: true } } }
         });
 
-        if (!dbSession || dbSession.revokedAt || dbSession.expiresAt < new Date()) {
+        if (!dbSession || dbSession.revokedAt || dbSession.expiresAt < new Date() || dbSession.user.status !== 'ACTIVE') {
             return null;
         }
 

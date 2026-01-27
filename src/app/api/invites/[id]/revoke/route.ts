@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, handleApiError, applySecurityHeaders } from "@/lib/guard";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 import { logAudit } from "@/lib/audit";
 
 /**
@@ -43,7 +46,8 @@ export async function POST(
         // Auditar
         logAudit("INVITE_REVOKED", "Invitation", id, session.sub);
 
-        return NextResponse.json({ success: true, message: "Invitación revocada" });
+        const response = NextResponse.json({ success: true, message: "Invitación revocada" });
+        return applySecurityHeaders(response, { noStore: true });
 
     } catch (error) {
         return handleApiError(error);

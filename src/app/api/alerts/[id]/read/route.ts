@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requireAuth, handleApiError } from "@/lib/guard";
+import { requireAuth, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * POST /api/alerts/:id/read
@@ -14,6 +17,16 @@ export async function POST(
     try {
         const session = await requireAuth();
         const { id: alertId } = params;
+
+        const scopeFilter = await enforceScope(session, { isMany: true, logic: 'OR', relationName: 'territories' });
+
+        const existing = await prisma.alert.findFirst({
+            where: { id: alertId, ...scopeFilter }
+        });
+
+        if (!existing) {
+            return NextResponse.json({ error: "Alerta no encontrada o fuera de alcance" }, { status: 404 });
+        }
 
         // Upsert para evitar errores de duplicado si se clickea varias veces
         await prisma.alertRead.upsert({

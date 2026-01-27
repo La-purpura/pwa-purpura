@@ -19,7 +19,7 @@ export function Sidebar() {
         { href: "/home", label: "Inicio", icon: "home" },
         { href: "/dashboard", label: "Tablero", icon: "dashboard", permission: "territory:view" },
         { href: "/tasks", label: "Tareas", icon: "assignment", permission: "forms:view" },
-        { href: "/reports", label: "Reportes", icon: "contract_edit", permission: "reports:view" },
+        { href: "/incidents", label: "Incidencias", icon: "contract_edit", permission: "reports:view" },
         { href: "/projects", label: "Proyectos", icon: "flag", permission: "projects:view" },
         { href: "/team", label: "Equipo", icon: "group", permission: "users:view" },
         { href: "/library", label: "Biblioteca", icon: "library_books", permission: "resources:view" },

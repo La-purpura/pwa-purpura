@@ -8,7 +8,7 @@ import { es } from "date-fns/locale";
 
 interface ActivityItem {
     id: string;
-    type: 'TASK' | 'REPORT' | 'ALERT';
+    type: 'TASK' | 'INCIDENT' | 'ALERT';
     title: string;
     timestamp: string;
     user: string;
@@ -24,15 +24,15 @@ export default function HomePage() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const [sumRes, taskRes, reportRes] = await Promise.all([
+                const [sumRes, taskRes, incidentRes] = await Promise.all([
                     fetch('/api/dashboard/summary'),
                     fetch('/api/tasks?limit=5'),
-                    fetch('/api/reports?limit=5')
+                    fetch('/api/incidents?limit=5')
                 ]);
 
                 const sumData = await sumRes.json();
                 const taskData = await taskRes.json();
-                const reportData = await reportRes.json();
+                const incidentData = await incidentRes.json();
 
                 setSummary(sumData);
 
@@ -46,13 +46,13 @@ export default function HomePage() {
                         user: t.assigneeName || 'Sin asignar',
                         status: t.status
                     })),
-                    ...((Array.isArray(reportData) ? reportData : [])).map((r: any) => ({
-                        id: r.id,
-                        type: 'REPORT' as const,
-                        title: r.title,
-                        timestamp: r.createdAt,
-                        user: r.reportedBy?.alias || r.reportedBy?.name || 'Sistema',
-                        status: r.status
+                    ...((Array.isArray(incidentData) ? incidentData : [])).map((i: any) => ({
+                        id: i.id,
+                        type: 'INCIDENT' as const,
+                        title: i.title,
+                        timestamp: i.createdAt,
+                        user: i.reportedBy?.alias || i.reportedBy?.name || 'Sistema',
+                        status: i.status
                     }))
                 ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 12);
 
@@ -77,7 +77,7 @@ export default function HomePage() {
 
             <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard label="Tareas" value={summary?.tasks?.pending || 0} color="bg-purple-600" />
-                <StatCard label="Reportes" value={summary?.incidents?.total || 0} color="bg-orange-500" />
+                <StatCard label="Incidencias" value={summary?.incidents?.total || 0} color="bg-orange-500" />
                 <StatCard label="Alertas" value={summary?.alerts?.active || 0} color="bg-red-500" />
                 <StatCard label="Proyectos" value={summary?.projects?.total || 0} color="bg-blue-600" />
             </section>
@@ -102,11 +102,11 @@ export default function HomePage() {
                             recentActivity.map((activity) => (
                                 <Link
                                     key={`${activity.type}-${activity.id}`}
-                                    href={activity.type === 'TASK' ? `/tasks` : `/reports/${activity.id}`}
+                                    href={activity.type === 'TASK' ? `/tasks` : `/incidents/${activity.id}`}
                                     className="flex items-center gap-4 p-5 bg-white dark:bg-[#1a1a1a] rounded-3xl border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-[#851c74]/20 transition-all group"
                                 >
                                     <div className={`size-12 rounded-[1rem] flex items-center justify-center shrink-0 shadow-sm ${activity.type === 'TASK' ? 'bg-purple-50 text-purple-600' :
-                                        activity.type === 'REPORT' ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'
+                                        activity.type === 'INCIDENT' ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'
                                         }`}>
                                         <span className="material-symbols-outlined text-xl">
                                             {activity.type === 'TASK' ? 'task_alt' : 'quick_reference_all'}
@@ -115,7 +115,7 @@ export default function HomePage() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-[#851c74]/50">
-                                                {activity.type === 'TASK' ? 'Tarea Operativa' : 'Información / Reporte'}
+                                                {activity.type === 'TASK' ? 'Tarea Operativa' : 'Incidencia / Reporte'}
                                             </span>
                                             <span className="text-[10px] font-bold text-gray-400">
                                                 {format(new Date(activity.timestamp), 'HH:mm')}
@@ -153,7 +153,7 @@ export default function HomePage() {
                         </h4>
                         <div className="grid grid-cols-1 gap-3">
                             <QuickButton href="/tasks" label="Hojas de Ruta" icon="map" />
-                            <QuickButton href="/reports/new" label="Emitir Reporte" icon="add_reaction" />
+                            <QuickButton href="/incidents/new" label="Nueva Incidencia" icon="add_reaction" />
                             <QuickButton href="/alerts" label="Comunicaciones" icon="podcasts" />
                         </div>
                     </div>

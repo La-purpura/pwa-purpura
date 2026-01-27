@@ -4,6 +4,7 @@ import { requireAuth, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * PATCH /api/me/profile
@@ -43,7 +44,7 @@ export async function PATCH(request: Request) {
         });
 
         const response = NextResponse.json(updatedUser);
-        return applySecurityHeaders(response);
+        return applySecurityHeaders(response, { noStore: true });
     } catch (error) {
         return handleApiError(error);
     }

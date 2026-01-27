@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requirePermission, enforceScope, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 import { TaskSchema } from "@/lib/schemas";
+import { createNotification } from "@/lib/notifications";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -99,6 +100,16 @@ export async function POST(request: Request) {
     });
 
     logAudit("TASK_CREATED", "Task", newTask.id, session.sub, { title });
+
+    if (assigneeId) {
+      await createNotification(
+        assigneeId,
+        "Nueva Tarea Asignada",
+        `Se te ha asignado la tarea: ${title}`,
+        "info",
+        { taskId: newTask.id, url: `/tasks` }
+      );
+    }
 
     const response = NextResponse.json(newTask, { status: 201 });
     return applySecurityHeaders(response);

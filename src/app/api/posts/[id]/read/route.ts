@@ -4,6 +4,7 @@ import { requireAuth, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * POST /api/posts/:id/read

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRBAC } from "@/hooks/useRBAC";
 import Link from "next/link";
 
-interface Report {
+interface Incident {
   id: string;
   title: string;
   description: string;
@@ -26,24 +26,24 @@ interface Report {
   };
 }
 
-export default function ReportsPage() {
+export default function IncidentsPage() {
   const { hasPermission, user } = useRBAC();
-  const [reports, setReports] = useState<Report[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
-  const fetchReports = async () => {
+  const fetchIncidents = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.append('status', statusFilter);
       if (categoryFilter) params.append('category', categoryFilter);
 
-      const res = await fetch(`/api/reports?${params}`);
+      const res = await fetch(`/api/incidents?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setReports(data);
+        setIncidents(data);
       }
     } catch (error) {
       console.error(error);
@@ -53,7 +53,7 @@ export default function ReportsPage() {
   };
 
   useEffect(() => {
-    fetchReports();
+    fetchIncidents();
   }, [statusFilter, categoryFilter]);
 
   const getPriorityColor = (priority: string) => {
@@ -86,16 +86,16 @@ export default function ReportsPage() {
     <div className="max-w-7xl mx-auto p-4 space-y-8 pb-24">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black">Reportes en Territorio</h1>
+          <h1 className="text-3xl font-black">Incidencias en Territorio</h1>
           <p className="text-gray-500">Gestión de problemas y necesidades detectadas.</p>
         </div>
         {hasPermission("reports:create") && (
           <Link
-            href="/reports/new"
+            href="/incidents/new"
             className="bg-[#851c74] text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-xl flex items-center gap-2 active:scale-95 transition-all"
           >
             <span className="material-symbols-outlined text-sm">add_circle</span>
-            Nuevo Reporte
+            Nueva Incidencia
           </Link>
         )}
       </header>
@@ -134,24 +134,24 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Lista de Reportes */}
+      {/* Lista de Incidencias */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
           <div className="col-span-full py-20 text-center">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-4 border-[#851c74]/20 border-t-[#851c74] rounded-full animate-spin"></div>
-              <p className="text-xs font-bold text-gray-400 uppercase">Cargando reportes...</p>
+              <p className="text-xs font-bold text-gray-400 uppercase">Cargando incidencias...</p>
             </div>
           </div>
-        ) : reports.length === 0 ? (
+        ) : incidents.length === 0 ? (
           <div className="col-span-full py-20 text-center text-gray-400 bg-gray-50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
-            No se encontraron reportes con los filtros seleccionados.
+            No se encontraron incidencias con los filtros seleccionados.
           </div>
         ) : (
-          reports.map((report) => (
+          incidents.map((incident) => (
             <Link
-              key={report.id}
-              href={`/reports/${report.id}`}
+              key={incident.id}
+              href={`/incidents/${incident.id}`}
               className="group bg-white dark:bg-[#1a1a1a] rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden hover:shadow-2xl hover:border-[#851c74]/30 transition-all"
             >
               <div className="p-6 space-y-4">
@@ -159,15 +159,15 @@ export default function ReportsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getPriorityColor(report.priority)}`}>
-                        {report.priority}
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getPriorityColor(incident.priority)}`}>
+                        {incident.priority}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getStatusColor(report.status)}`}>
-                        {report.status}
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getStatusColor(incident.status)}`}>
+                        {incident.status}
                       </span>
                     </div>
                     <h3 className="font-black text-lg leading-tight line-clamp-2 group-hover:text-[#851c74] transition-colors">
-                      {report.title}
+                      {incident.title}
                     </h3>
                   </div>
                 </div>
@@ -176,19 +176,19 @@ export default function ReportsPage() {
                 <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-[10px] font-bold text-[#851c74]">
-                      {(report.reportedBy.alias || report.reportedBy.name).substring(0, 2).toUpperCase()}
+                      {(incident.reportedBy.alias || incident.reportedBy.name).substring(0, 2).toUpperCase()}
                     </div>
                     <div className="flex flex-col">
                       <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                        {report.reportedBy.alias || report.reportedBy.name}
+                        {incident.reportedBy.alias || incident.reportedBy.name}
                       </span>
-                      {isAdmin && report.reportedBy.alias && (
-                        <span className="text-[9px] text-gray-400 italic">Real: {report.reportedBy.name}</span>
+                      {isAdmin && incident.reportedBy.alias && (
+                        <span className="text-[9px] text-gray-400 italic">Real: {incident.reportedBy.name}</span>
                       )}
                     </div>
                   </div>
                   <span className="text-[10px] font-bold text-gray-400 uppercase">
-                    {new Date(report.createdAt).toLocaleDateString()}
+                    {new Date(incident.createdAt).toLocaleDateString()}
                   </span>
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { ROLE_PERMISSIONS, ROLE_LABELS } from "@/lib/rbac";
 import { requirePermission, handleApiError } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/roles

@@ -19,15 +19,12 @@ export async function GET(request: Request) {
         const territoryId = searchParams.get('territoryId');
         const query = searchParams.get('q');
 
-        const scopeFilter = await enforceScope(session);
+        const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
 
         const where: any = {
-            ...status ? { status } : {},
-            ...territoryId ? {
-                territories: { some: { territoryId } }
-            } : (scopeFilter.territoryId ? {
-                territories: { some: { territoryId: scopeFilter.territoryId } }
-            } : {})
+            ...scopeFilter,
+            ...(status ? { status } : {}),
+            ...(territoryId ? { territories: { some: { territoryId } } } : {})
         };
 
         if (query) {
@@ -70,7 +67,29 @@ export async function POST(request: Request) {
             return handleApiError(result.error);
         }
 
-        const { title, description, branch, type, priority, territoryIds } = result.data;
+        const { title, description, branch, type, priority, territoryIds: requestedTerritoryIds, milestones } = result.data;
+
+        // Validar alcance territorial para creación
+        let finalTerritoryIds = requestedTerritoryIds || [];
+
+        if (session.role !== 'SuperAdminNacional') {
+            const accessibleTerritories = await prisma.territory.findMany({
+                where: {
+                    id: { in: (finalTerritoryIds.length > 0 ? finalTerritoryIds : (session.territoryId ? [session.territoryId] : [])) as string[] },
+                    OR: [
+                        { id: session.territoryId },
+                        { parentId: session.territoryId } // O usar lógica recursiva si es necesario
+                    ]
+                },
+                select: { id: true }
+            });
+            finalTerritoryIds = accessibleTerritories.map(t => t.id);
+
+            // Si no envió nada o lo enviado es inválido, forzar su territorio
+            if (finalTerritoryIds.length === 0 && session.territoryId) {
+                finalTerritoryIds = [session.territoryId];
+            }
+        }
 
         const project = await prisma.project.create({
             data: {
@@ -83,14 +102,21 @@ export async function POST(request: Request) {
                 leaderId: session.sub,
                 code: `PRJ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
                 territories: {
-                    create: (territoryIds || []).map((tid: string) => ({
+                    create: finalTerritoryIds.map((tid: string) => ({
                         territoryId: tid
                     }))
-                }
+                },
+                milestones: milestones && milestones.length > 0 ? {
+                    create: milestones.map((m: any) => ({
+                        name: m.name,
+                        status: 'pending',
+                        endDate: m.endDate ? new Date(m.endDate) : null
+                    }))
+                } : undefined
             },
             include: {
-                territories: true,
-                leader: true
+                territories: { include: { territory: true } },
+                leader: { select: { id: true, name: true, alias: true } }
             }
         });
 

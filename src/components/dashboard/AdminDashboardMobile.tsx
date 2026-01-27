@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
-import { CriticalIncidents } from "@/components/dashboard/CriticalIncidents";
+import { CriticalReports } from "@/components/dashboard/CriticalReports";
 import { DashboardAnalytics } from "@/components/dashboard/DashboardAnalytics";
 import { useRBAC } from "@/hooks/useRBAC";
 
@@ -94,7 +94,7 @@ export default function AdminDashboardMobile() {
             </section>
 
             <AnnouncementFeed />
-            <CriticalIncidents />
+            <CriticalReports />
 
             {/* Solicitudes de Revisión */}
             {requests.length > 0 && (

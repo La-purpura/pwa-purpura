@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/projects/:id
@@ -11,11 +14,16 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        await requirePermission('projects:view');
+        const session = await requirePermission('projects:view');
         const { id } = params;
 
-        const project = await prisma.project.findUnique({
-            where: { id },
+        const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
+
+        const project = await prisma.project.findFirst({
+            where: {
+                id,
+                ...scopeFilter
+            },
             include: {
                 leader: { select: { id: true, name: true, email: true } },
                 territories: { include: { territory: { select: { name: true } } } },
@@ -25,7 +33,7 @@ export async function GET(
             }
         });
 
-        if (!project) return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
+        if (!project) return NextResponse.json({ error: "Proyecto no encontrado o sin acceso" }, { status: 404 });
 
         return NextResponse.json(project);
 
@@ -46,21 +54,52 @@ export async function PATCH(
         const { id } = params;
         const body = await request.json();
 
-        // Borrar relaciones si se envían nuevas
+        const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
+
+        const existing = await prisma.project.findFirst({
+            where: { id, ...scopeFilter }
+        });
+
+        if (!existing) {
+            return NextResponse.json({ error: "Proyecto no encontrado o sin acceso" }, { status: 404 });
+        }
+
+        const data: any = { ...body };
+
+        // Borrar relaciones si se envían nuevas y validar alcance
         if (body.territoryIds) {
-            await prisma.projectTerritory.deleteMany({ where: { projectId: id } });
-            body.territories = {
-                create: body.territoryIds.map((tid: string) => ({ territoryId: tid }))
-            };
-            delete body.territoryIds;
+            let finalTerritoryIds = body.territoryIds;
+
+            // Si no es SuperAdmin, validar que los territorios estén en su alcance
+            if (session.role !== 'SuperAdminNacional') {
+                const accessible = await prisma.territory.findMany({
+                    where: {
+                        id: { in: finalTerritoryIds },
+                        OR: [
+                            { id: session.territoryId },
+                            { parentId: session.territoryId }
+                        ]
+                    },
+                    select: { id: true }
+                });
+                finalTerritoryIds = accessible.map(t => t.id);
+            }
+
+            if (finalTerritoryIds.length > 0) {
+                await prisma.projectTerritory.deleteMany({ where: { projectId: id } });
+                data.territories = {
+                    create: finalTerritoryIds.map((tid: string) => ({ territoryId: tid }))
+                };
+            }
+            delete data.territoryIds;
         }
 
         const project = await prisma.project.update({
             where: { id },
-            data: body
+            data
         });
 
-        logAudit("PROJECT_APPROVED", "Project", id, session.sub, { updates: body });
+        logAudit("PROJECT_UPDATED", "Project", id, session.sub, { updates: body });
 
         return NextResponse.json(project);
     } catch (error) {

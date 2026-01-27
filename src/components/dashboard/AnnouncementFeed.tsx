@@ -23,7 +23,7 @@ export function AnnouncementFeed() {
             const res = await fetch("/api/posts");
             if (res.ok) {
                 const data = await res.json();
-                setPosts(data);
+                setPosts(data.items || []);
             }
         } catch (error) {
             console.error(error);
@@ -64,8 +64,8 @@ export function AnnouncementFeed() {
                     <div
                         key={post.id}
                         className={`p-4 rounded-2xl border transition-all ${post.type === 'urgent'
-                                ? 'bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/20'
-                                : 'bg-white border-gray-100 dark:bg-[#20121d] dark:border-gray-800'
+                            ? 'bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/20'
+                            : 'bg-white border-gray-100 dark:bg-[#20121d] dark:border-gray-800'
                             } ${!post.isRead ? 'ring-2 ring-purple-500/20' : ''}`}
                     >
                         <div className="flex justify-between items-start mb-2">

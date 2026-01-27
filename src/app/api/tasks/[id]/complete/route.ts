@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * POST /api/tasks/:id/complete
@@ -15,6 +18,17 @@ export async function POST(
     try {
         const session = await requirePermission('forms:submit');
         const { id } = params;
+
+        const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
+
+        // Verificar existencia y alcance
+        const taskExists = await prisma.task.findFirst({
+            where: { id, ...scopeFilter }
+        });
+
+        if (!taskExists) {
+            return NextResponse.json({ error: "Tarea no encontrada o fuera de alcance" }, { status: 404 });
+        }
 
         const task = await prisma.task.update({
             where: { id },

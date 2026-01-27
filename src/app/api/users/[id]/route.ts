@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * PATCH /api/users/:id
@@ -15,12 +18,20 @@ export async function PATCH(
     try {
         const session = await requirePermission('users:edit');
         const { id } = params;
+
+        const scopeFilter = await enforceScope(session);
+
         const body = await request.json();
 
         const { role, branchId, territoryId, territoryScope, status, name, alias, phone } = body;
 
-        // 1. Verificar existencia
-        const existingUser = await prisma.user.findUnique({ where: { id } });
+        // 1. Verificar existencia y alcance
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                id,
+                ...scopeFilter
+            }
+        });
         if (!existingUser) {
             return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
         }

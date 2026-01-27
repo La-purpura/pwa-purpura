@@ -8,10 +8,13 @@ export interface User {
     phone?: string;
     photoUrl?: string;
     role: Role;
+    status: "ACTIVE" | "SUSPENDED" | "INACTIVE";
     territory: string;
     territoryId?: string;
+    territoryScope?: string;
     branchId?: string;
-    avatar: string; // Keep for compatibility if used elsewhere, but we'll use photoUrl too
+    branch?: string;
+    avatar: string;
 }
 
 export interface Task {

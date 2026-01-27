@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
-import { CriticalIncidents } from "@/components/dashboard/CriticalIncidents";
+import { CriticalReports } from "@/components/dashboard/CriticalReports";
 
 export default function UserDashboardDesktop() {
     const { user } = useAppStore();
@@ -73,7 +73,7 @@ export default function UserDashboardDesktop() {
                             title="Reportar Incidencia"
                             desc="Notifica problemas en territorio."
                             icon="report_problem"
-                            href="/incidents/new"
+                            href="/reports/new"
                             color="orange"
                         />
                     </div>
@@ -121,7 +121,7 @@ export default function UserDashboardDesktop() {
                         <AnnouncementFeed />
                     </div>
 
-                    <CriticalIncidents />
+                    <CriticalReports />
 
                     <div className="bg-[#851c74] rounded-[2.5rem] p-8 text-white relative overflow-hidden group">
                         <div className="relative z-10">

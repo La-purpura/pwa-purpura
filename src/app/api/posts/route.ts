@@ -4,6 +4,7 @@ import { requirePermission, enforceScope, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/posts

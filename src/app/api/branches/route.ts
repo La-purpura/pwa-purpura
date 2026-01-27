@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requireAuth, handleApiError } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
     try {

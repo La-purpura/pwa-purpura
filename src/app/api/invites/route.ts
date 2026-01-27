@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requirePermission, handleApiError } from "@/lib/guard";
+import { requirePermission, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { generateInviteToken, hashInviteToken } from "@/lib/invites";
 import { logAudit } from "@/lib/audit";
+import { UserInviteSchema } from "@/lib/schemas";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/invites
@@ -35,7 +37,8 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json(invites);
+    const response = NextResponse.json(invites);
+    return applySecurityHeaders(response, { noStore: true });
   } catch (error) {
     return handleApiError(error);
   }
@@ -49,6 +52,12 @@ export async function POST(request: Request) {
   try {
     const session = await requirePermission('users:invite');
     const body = await request.json();
+
+    const result = UserInviteSchema.safeParse(body);
+    if (!result.success) {
+      return handleApiError(result.error);
+    }
+
     const {
       email,
       firstName,
@@ -57,11 +66,7 @@ export async function POST(request: Request) {
       branchId,
       territoryScope,
       expiresHours = 48
-    } = body;
-
-    if (!email || !roleCode) {
-      return NextResponse.json({ error: "Faltan datos obligatorios (email, roleCode)" }, { status: 400 });
-    }
+    } = result.data;
 
     // 1. Generar tokens
     const plainToken = generateInviteToken();
@@ -97,13 +102,14 @@ export async function POST(request: Request) {
       expiresAt
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       inviteUrl,
       expiresAt,
       invitationId: invitation.id
     });
 
+    return applySecurityHeaders(response, { noStore: true });
   } catch (error) {
     return handleApiError(error);
   }

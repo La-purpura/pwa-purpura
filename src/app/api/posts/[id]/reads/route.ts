@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/posts/:id/reads

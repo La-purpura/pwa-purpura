@@ -71,9 +71,12 @@ export default function InviteUserPage() {
         }
     };
 
+    const [copied, setCopied] = useState(false);
+
     const copyLink = () => {
         navigator.clipboard.writeText(generatedLink);
-        alert("¡Enlace copiado al portapapeles!");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     return (
@@ -216,7 +219,12 @@ export default function InviteUserPage() {
                     <div className="bg-white dark:bg-black p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center gap-3 mb-6 overflow-hidden">
                         <span className="material-symbols-outlined text-gray-400">link</span>
                         <p className="text-xs font-mono text-gray-500 truncate flex-1 text-left">{generatedLink}</p>
-                        <button onClick={copyLink} className="text-[#851c74] font-bold text-xs hover:underline whitespace-nowrap">COPIAR</button>
+                        <button
+                            onClick={copyLink}
+                            className={`${copied ? 'text-green-500' : 'text-[#851c74]'} font-black text-[10px] hover:underline whitespace-nowrap transition-colors`}
+                        >
+                            {copied ? 'COPIADO' : 'COPIAR'}
+                        </button>
                     </div>
 
                     <div className="flex justify-center gap-4">

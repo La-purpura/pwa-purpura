@@ -95,8 +95,14 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
                     </span>
                     <h1 className="text-2xl font-bold leading-tight">{task.title}</h1>
                     <div className="flex gap-4 mt-3 text-white/70 text-xs font-bold uppercase tracking-wider">
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">location_on</span> {task.territory?.name || "Nacional"}</span>
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">person</span> {task.assignee?.name || "Sin asignar"}</span>
+                        <span className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">location_on</span>
+                            {task.territories?.map((t: any) => t.territory.name).join(', ') || "Global"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">person</span>
+                            {task.assignee?.name || "Sin asignar"}
+                        </span>
                     </div>
                 </div>
             </header>

@@ -3,6 +3,9 @@ import prisma from "@/lib/prisma";
 import { requirePermission, handleApiError } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * PATCH /api/resources/:id
  */

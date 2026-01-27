@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * DEPRECATED: Use /api/dashboard/summary instead.
  * Proxying for backward compatibility.
