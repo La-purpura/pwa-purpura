@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { requirePermission, enforceScope, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
-import { UserInviteSchema } from "@/lib/schemas";
+import { UserCreateSchema } from "@/lib/schemas";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     // Input Validation with Zod
-    const result = UserInviteSchema.safeParse(body);
+    const result = UserCreateSchema.safeParse(body);
     if (!result.success) {
       return handleApiError(result.error);
     }

@@ -18,28 +18,39 @@ export default function UserNewPage() {
   const handleSubmit = () => {
     const safeName = name.trim();
     const safeEmail = email.trim();
-    if (!safeName || !safeEmail) {
+    if (!safeName || !safeEmail || !role) {
       return;
     }
 
+    // Map basic UI roles to system RBAC roles
+    let systemRole: any = "Militante";
+    if (role === "Administrador") systemRole = "AdminNacional";
+    if (role === "Supervisor") systemRole = "Coordinador";
+    if (role === "Operador") systemRole = "Colaborador";
+
+    // Optimistic UI update
     addUser({
       id: crypto.randomUUID(),
       name: safeName,
       email: safeEmail,
-      role: role === "Administrador" ? "admin" : "user",
-      territory: territory || "Zona Norte",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAzx-VaGVrMQA2ZySeUcKkrzxuiAjEaqtxxWEBxoxmmheyOgzNSnl1ZUyJfchXj_o2AiYz8R1ufZOSI0ePDZBJEyKVB3rYVqInPRRtN48E5EzPRYRb92XQdgS6rDfUq4YJ6_ez1NcpTXAJhB-HP3TxlVtmH2mFuFuptl7kFYevHoHJWk8h3eRTMt2_D4RA5wSbvc-VIo5HNOqlVJR4GO8YRBZg_rIY48u7vX-BQ49IwP3eBx0D8Bby2Izvj_YOKA06dCkjkpP-oC30"
+      role: systemRole, // Use valid Role type
+      status: 'ACTIVE',
+      territory: territory || "Nacional",
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(safeName)}&background=random`
     });
+
     void fetch("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: safeName,
         email: safeEmail,
-        role: role || "Operador",
-        territory: territory || "Zona Norte",
+        role: systemRole,
+        territoryId: null, // Basic implementation lacks territory ID selection yet
+        branchId: null
       }),
     }).catch(() => null);
+
     router.push("/users");
   };
 

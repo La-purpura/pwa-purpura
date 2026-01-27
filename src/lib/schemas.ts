@@ -10,6 +10,15 @@ export const UserInviteSchema = z.object({
     expiresHours: z.number().optional().default(48)
 });
 
+export const UserCreateSchema = z.object({
+    email: z.string().email("Email inválido"),
+    name: z.string().min(2, "Nombre demasiado corto"),
+    role: z.string(),
+    territoryId: z.string().optional().nullable(),
+    branchId: z.string().optional().nullable(),
+    password: z.string().min(6).optional()
+});
+
 export const TaskSchema = z.object({
     title: z.string().min(3, "El título debe tener al menos 3 caracteres"),
     description: z.string().optional().nullable(),
