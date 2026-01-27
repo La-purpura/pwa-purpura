@@ -57,6 +57,7 @@ model User {
   ledProjects       Project[]
   requests          Request[]
   authoredResources Resource[]   @relation("AuthoredResources")
+  uploadedFiles     ResourceVersion[]
   sessions          Session[]
   assignedTasks     Task[]
   readAlerts        AlertRead[]
@@ -273,18 +274,34 @@ model PostRead {
 }
 
 model Resource {
-  id          String     @id @default(cuid())
+  id          String            @id @default(cuid())
   title       String
   description String?
-  url         String
   category    String
   branchId    String?
   authorId    String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  author      User       @relation("AuthoredResources", fields: [authorId], references: [id])
-  branch      Branch?    @relation(fields: [branchId], references: [id])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  author      User              @relation("AuthoredResources", fields: [authorId], references: [id])
+  branch      Branch?           @relation(fields: [branchId], references: [id])
   territories ResourceTerritory[]
+  versions    ResourceVersion[]
+}
+
+model ResourceVersion {
+  id          String   @id @default(cuid())
+  resourceId  String
+  version     Int
+  fileName    String
+  fileKey     String
+  fileSize    Int
+  uploadedById String
+  createdAt   DateTime @default(now())
+
+  resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  uploadedBy  User     @relation(fields: [uploadedById], references: [id])
+
+  @@index([resourceId])
 }
 
 model ResourceTerritory {
