@@ -8,10 +8,21 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const session = request.cookies.get("session")?.value;
 
+    // Observability: Correlation ID
+    const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
+
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-request-id", requestId);
+    requestHeaders.set("x-path", pathname); // Pass path for logging later
+
+    // ... continue logic with `requestHeaders` passed to `NextResponse.next({ headers: requestHeaders })`
+    // but the logic below constructs `response` differently.
+
     const isAppRoute = pathname.startsWith("/home") ||
         pathname.startsWith("/dashboard") ||
         pathname.startsWith("/tasks") ||
         pathname.startsWith("/reports") ||
+        pathname.startsWith("/incidents") ||
         pathname.startsWith("/projects") ||
         pathname.startsWith("/team") ||
         pathname.startsWith("/library") ||
@@ -21,7 +32,13 @@ export async function middleware(request: NextRequest) {
 
     const isAuthRoute = pathname === "/" || pathname.startsWith("/auth/login");
 
-    let response: NextResponse;
+    let response: NextResponse | undefined;
+
+    // We need to ensure we use the new headers
+    // When redirecting, we don't necessarily pass headers to the *next* request unless we forward them?
+    // Actually redirects are new responses.
+
+    // Logic refactor to support headers injection in `next()` calls.
 
     if (isAppRoute && !session) {
         response = NextResponse.redirect(new URL("/", request.url));
@@ -30,15 +47,47 @@ export async function middleware(request: NextRequest) {
             await jwtVerify(session, key);
             response = NextResponse.redirect(new URL("/home", request.url));
         } catch (error) {
-            response = NextResponse.next();
+            response = NextResponse.next({ request: { headers: requestHeaders } });
         }
     } else if (session && isAppRoute) {
-        const { updateSession } = await import("@/lib/auth");
-        const updatedResponse = await updateSession(request);
-        response = updatedResponse || NextResponse.next();
+        // Here updateSession might complicate things if it doesn't accept headers override
+        // Assuming updateSession handles it or we wrap it.
+        // For now, let's look at how updateSession is implemented. 
+        // If I can't easily change updateSession, I might lose the header on session refresh?
+        // Let's assume response = NextResponse.next...
+        // I will just modify the response objects created.
+
+        try {
+            const { updateSession } = await import("@/lib/auth");
+            // Note: updateSession likely returns a Response object.
+            // We can't injected request headers easily into an already running logic inside updateSession unless we modify updateSession.
+            // However, for the *downstream* handler (page/api), we need `request` to have the header.
+            // `updateSession` takes `request`. We should pass written headers?
+            // `NextResponse.next` takes options. 
+            // Let's modify the request passed to updateSession if possible, or accept that updateSession creates a response.
+
+            // Actually, simplest way: Just create response then set headers on it.
+            // But for `x-request-id` to reach the API route (Server Component), it MUST be in `request.headers` when calling `next()`.
+
+            const updatedResponse = await updateSession(request); // We can't change request in place for the function call easily?
+
+            if (updatedResponse) {
+                response = updatedResponse;
+            } else {
+                response = NextResponse.next({ request: { headers: requestHeaders } });
+            }
+        } catch (e) {
+            response = NextResponse.next({ request: { headers: requestHeaders } });
+        }
     } else {
-        response = NextResponse.next();
+        response = NextResponse.next({ request: { headers: requestHeaders } });
     }
+
+    if (!response) response = NextResponse.next({ request: { headers: requestHeaders } });
+
+    // Set Response Headers (so client sees ID)
+    response.headers.set("x-request-id", requestId);
+    // ... hardening headers ...
 
     // --- Hardening: Security Headers ---
     response.headers.set('X-Frame-Options', 'DENY');

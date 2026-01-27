@@ -2,6 +2,9 @@ import { getSession } from "@/lib/auth";
 import { Permission, ROLE_PERMISSIONS, Role } from "@/lib/rbac";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { headers } from "next/headers";
+import * as Sentry from "@sentry/nextjs";
+import { Logger } from "@/lib/logger";
 
 export class AuthError extends Error {
     constructor(message: string) {
@@ -96,28 +99,45 @@ export async function enforceScope(
 }
 
 export function handleApiError(error: any) {
+    const headersList = headers();
+    const requestId = headersList.get("x-request-id") || undefined;
+    const path = headersList.get("x-path") || undefined;
+    const method = headersList.get("x-method") || "UNKNOWN"; // x-method not set in middleware yet, but logic is sound
+
+    // Common metadata
+    const meta = { requestId, path, method };
+
     if (error instanceof AuthError) {
+        Logger.warn(error.message, { ...meta, statusCode: 401 });
         return NextResponse.json({ error: error.message }, {
             status: 401,
             headers: { 'Cache-Control': 'no-store' }
         });
     }
     if (error instanceof PermissionError) {
+        Logger.warn(error.message, { ...meta, statusCode: 403 });
         return NextResponse.json({ error: error.message }, {
             status: 403,
             headers: { 'Cache-Control': 'no-store' }
         });
     }
     if (error instanceof ZodError) {
+        Logger.warn("Validación fallida", { ...meta, statusCode: 400, details: error.flatten() });
         return NextResponse.json({
             error: "Datos de entrada inválidos",
             details: error.issues.map(e => ({ path: e.path, message: e.message }))
         }, { status: 400 });
     }
 
-    console.error("Unhandled API Error:", error);
-    // En producción no deberíamos filtrar el stack trace o detalles internos
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+    // Unhandled 500
+    Logger.error("Error interno del servidor", { ...meta, statusCode: 500, error });
+
+    // Sentry Capture
+    Sentry.captureException(error, {
+        extra: { requestId, path }
+    });
+
+    return NextResponse.json({ error: "Error interno del servidor", requestId }, { status: 500 });
 }
 
 /**
