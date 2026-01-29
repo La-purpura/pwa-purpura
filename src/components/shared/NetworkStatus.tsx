@@ -1,11 +1,24 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { syncService } from '@/lib/client/sync';
 
 export const NetworkStatus = () => {
     const [isOnline, setIsOnline] = useState(true);
     const [showBanner, setShowBanner] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSync = async () => {
+        setIsSyncing(true);
+        try {
+            await syncService.pushActions();
+            await syncService.syncAll();
+        } catch (err) {
+            console.error("Sync failed", err);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     useEffect(() => {
         setIsOnline(navigator.onLine);
@@ -13,6 +26,7 @@ export const NetworkStatus = () => {
         const handleOnline = () => {
             setIsOnline(true);
             setShowBanner(true);
+            handleSync();
             setTimeout(() => setShowBanner(false), 3000);
         };
 
@@ -38,13 +52,13 @@ export const NetworkStatus = () => {
                 } ${showBanner ? 'translate-y-0' : '-translate-y-full'}`}
         >
             <div className="flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined text-sm">
-                    {isOnline ? 'cloud_done' : 'cloud_off'}
+                <span className={`material-symbols-outlined text-sm ${isSyncing ? 'animate-spin' : ''}`}>
+                    {isSyncing ? 'sync' : (isOnline ? 'cloud_done' : 'cloud_off')}
                 </span>
-                {isOnline ? '¡Estás en línea!' : 'Sin conexión a internet - Modo offline'}
-                {isOnline && (
+                {isSyncing ? 'Sincronizando datos...' : (isOnline ? '¡Estás en línea!' : 'Sin conexión a internet - Modo offline')}
+                {isOnline && !isSyncing && (
                     <button
-                        onClick={() => window.location.reload()}
+                        onClick={handleSync}
                         className="ml-2 underline"
                     >
                         Sincronizar ahora

@@ -16,6 +16,9 @@ export async function GET(request: Request) {
 
     const status = searchParams.get('status') || 'active';
     const severity = searchParams.get('severity');
+    const cursor = searchParams.get('cursor');
+    const limitParams = searchParams.get('limit');
+    const limit = limitParams ? Math.min(parseInt(limitParams), 50) : 20;
 
     // ABAC: Alertas globales O de mi territorio
     const scopeFilter = await enforceScope(session, { isMany: true, logic: 'OR', relationName: 'territories' });
@@ -29,6 +32,9 @@ export async function GET(request: Request) {
 
     const alerts = await prisma.alert.findMany({
       where,
+      take: limit + 1,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
       include: {
         territories: { include: { territory: { select: { name: true } } } },
         reads: { where: { userId: session.sub } }
@@ -36,13 +42,19 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' }
     });
 
+    let nextCursor = null;
+    if (alerts.length > limit) {
+      const nextItem = alerts.pop();
+      nextCursor = nextItem?.id;
+    }
+
     const mapped = alerts.map(a => ({
       ...a,
       isRead: a.reads.length > 0,
       territoryNames: a.territories.map(t => t.territory.name).join(', ') || 'Global'
     }));
 
-    return NextResponse.json(mapped, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({ items: mapped, nextCursor }, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (error) {
     return handleApiError(error);

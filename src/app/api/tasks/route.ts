@@ -4,6 +4,7 @@ import { requirePermission, enforceScope, handleApiError, applySecurityHeaders }
 import { logAudit } from "@/lib/audit";
 import { TaskSchema } from "@/lib/schemas";
 import { createNotification } from "@/lib/notifications";
+import { validateETag, generateETag } from "@/lib/performance";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -20,7 +21,9 @@ export async function GET(request: Request) {
     const assigneeId = searchParams.get('assigneeId');
     const territoryId = searchParams.get('territoryId');
     const query = searchParams.get('q');
-    const limit = searchParams.get('limit');
+    const cursor = searchParams.get('cursor');
+    const limitParams = searchParams.get('limit');
+    const limit = limitParams ? Math.min(parseInt(limitParams), 50) : 20;
 
     const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
 
@@ -44,13 +47,25 @@ export async function GET(request: Request) {
 
     const tasks = await prisma.task.findMany({
       where,
+      take: limit + 1,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
       include: {
         assignee: { select: { id: true, name: true, email: true } },
         territories: { include: { territory: { select: { name: true } } } }
       },
-      orderBy: { createdAt: 'desc' },
-      take: limit ? parseInt(limit) : undefined
+      orderBy: { createdAt: 'desc' }
     });
+
+    // Performance: Support ETag
+    const isCached = validateETag(request, tasks);
+    if (isCached) return new NextResponse(null, { status: 304 });
+
+    let nextCursor = null;
+    if (tasks.length > limit) {
+      const nextItem = tasks.pop();
+      nextCursor = nextItem?.id;
+    }
 
     const mapped = tasks.map(t => ({
       ...t,
@@ -59,7 +74,12 @@ export async function GET(request: Request) {
       dueDate: t.dueDate?.toISOString() || null
     }));
 
-    const response = NextResponse.json(mapped);
+    const response = NextResponse.json({ items: mapped, nextCursor }, {
+      headers: {
+        'ETag': generateETag(tasks),
+        'Cache-Control': 'no-cache'
+      }
+    });
     return applySecurityHeaders(response);
   } catch (error) {
     return handleApiError(error);

@@ -15,8 +15,10 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
 
         const type = searchParams.get('type');
+        const query = searchParams.get('q');
         const cursorId = searchParams.get('cursor');
-        const limit = 10;
+        const limitParams = searchParams.get('limit');
+        const limit = limitParams ? Math.min(parseInt(limitParams), 50) : 10;
 
         // ABAC: Filtrar por alcance territorial many-to-many
         const scopeFilter = await enforceScope(session, {
@@ -31,6 +33,12 @@ export async function GET(request: Request) {
         };
 
         if (type) where.type = type;
+        if (query) {
+            where.OR = [
+                { title: { contains: query, mode: 'insensitive' } },
+                { content: { contains: query, mode: 'insensitive' } }
+            ];
+        }
 
         const posts = await prisma.post.findMany({
             where,

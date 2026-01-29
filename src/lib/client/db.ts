@@ -14,6 +14,7 @@ export class AppDatabase extends Dexie {
     posts!: Table<any>;
     users_light!: Table<any>;
     sync_state!: Table<SyncState>;
+    offline_actions!: Table<any>;
 
     constructor() {
         super('PurpuraDB');
@@ -24,7 +25,8 @@ export class AppDatabase extends Dexie {
             reports: 'id, category, status, createdAt',
             posts: 'id, authorId, publishedAt',
             users_light: 'id, email',
-            sync_state: 'id'
+            sync_state: 'id',
+            offline_actions: '++id, type, status, createdAt'
         });
     }
 }

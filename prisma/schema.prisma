@@ -171,6 +171,7 @@ model Alert {
 
   @@index([status])
   @@index([severity])
+  @@index([createdAt])
 }
 
 model AlertTerritory {
@@ -209,6 +210,10 @@ model Project {
   milestones  ProjectMilestone[]
   risks       ProjectRisk[]
   territories ProjectTerritory[]
+
+  @@index([status])
+  @@index([leaderId])
+  @@index([createdAt])
 }
 
 model ProjectTerritory {
@@ -280,6 +285,7 @@ model Post {
 
   @@index([publishedAt])
   @@index([branchId])
+  @@index([createdAt])
 }
 
 model PostTerritory {
@@ -361,6 +367,11 @@ model Report {
   assignedTo   User?      @relation("AssignedReports", fields: [assignedToId], references: [id])
   reportedBy   User       @relation("ReportedReports", fields: [reportedById], references: [id])
   territories  ReportTerritory[]
+
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+  @@index([assignedToId])
 }
 
 model ReportTerritory {
@@ -386,6 +397,30 @@ model AuditLog {
   @@index([entity])
   @@index([entityId])
   @@index([actorId])
+}
+
+model IdempotencyRecord {
+  id             String   @id @default(cuid())
+  key            String   @unique // The Client-Generated ID/Key
+  userId         String
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime @default(now())
+
+  @@index([userId, key])
+}
+
+model Conflict {
+  id          String   @id @default(cuid())
+  entityType  String
+  entityId    String
+  userId      String
+  data        Json
+  reason      String
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([entityId])
 }
 
 model Invitation {

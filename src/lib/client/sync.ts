@@ -63,5 +63,64 @@ export const syncService = {
         });
 
         return data;
+    },
+
+    /**
+     * Pushes pending offline actions to the server.
+     */
+    async pushActions() {
+        const pending = await db.offline_actions.where('status').equals('pending').toArray();
+        if (pending.length === 0) return;
+
+        try {
+            const response = await fetch('/api/sync/push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actions: pending })
+            });
+
+            if (!response.ok) throw new Error('Push failed');
+
+            const { results } = await response.json();
+
+            // Update local actions based on results
+            for (const res of results) {
+                const action = pending.find(a => a.idempotencyKey === res.idempotencyKey);
+                if (action) {
+                    if (res.status >= 200 && res.status < 300) {
+                        await db.offline_actions.update(action.id, { status: 'synced', result: res.body });
+                    } else if (res.status === 409) {
+                        await db.offline_actions.update(action.id, { status: 'conflict', error: 'Version mismatch' });
+                    } else {
+                        await db.offline_actions.update(action.id, { status: 'failed', error: res.error });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Push actions failed:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Queues an action to be performed offline/synced later.
+     */
+    async queueAction(type: string, payload: any) {
+        const action = {
+            type,
+            payload,
+            idempotencyKey: crypto.randomUUID(),
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        };
+
+        await db.offline_actions.add(action);
+
+        // Attempt sync immediately if online
+        if (navigator.onLine) {
+            this.pushActions().catch(() => { }); // Fire and forget
+        }
+
+        return action;
     }
 };

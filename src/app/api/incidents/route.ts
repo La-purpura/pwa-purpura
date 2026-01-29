@@ -19,8 +19,10 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
     const category = searchParams.get('category');
     const priority = searchParams.get('priority');
+    const query = searchParams.get('q');
+    const cursor = searchParams.get('cursor');
     const limitParams = searchParams.get('limit');
-    const limit = limitParams ? parseInt(limitParams) : undefined;
+    const limit = limitParams ? Math.min(parseInt(limitParams), 50) : 20;
 
     const scopeFilter = await enforceScope(session, { isMany: true, relationName: 'territories' });
     const where: any = { ...scopeFilter };
@@ -29,23 +31,39 @@ export async function GET(request: Request) {
     if (category) where.category = category;
     if (priority) where.priority = priority;
 
+    if (query) {
+      where.OR = [
+        { title: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
+        { address: { contains: query, mode: 'insensitive' } }
+      ];
+    }
+
     const reports = await prisma.report.findMany({
       where,
+      take: limit + 1,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
       include: {
         reportedBy: { select: { name: true, alias: true, email: true } },
         assignedTo: { select: { name: true, alias: true, email: true } },
         territories: { include: { territory: { select: { name: true } } } }
       },
-      orderBy: { createdAt: 'desc' },
-      take: limit && limit > 0 && limit <= 100 ? limit : 50
+      orderBy: { createdAt: 'desc' }
     });
+
+    let nextCursor = null;
+    if (reports.length > limit) {
+      const nextItem = reports.pop();
+      nextCursor = nextItem?.id;
+    }
 
     const mapped = reports.map(rep => ({
       ...rep,
       territoryNames: rep.territories.map(t => t.territory.name).join(', ') || 'Global'
     }));
 
-    const response = NextResponse.json(mapped);
+    const response = NextResponse.json({ items: mapped, nextCursor });
     return applySecurityHeaders(response);
   } catch (error) {
     return handleApiError(error);
