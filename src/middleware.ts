@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
     const session = request.cookies.get("session")?.value;
 
     // Observability: Correlation ID
-    const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
+    const requestId = request.headers.get("x-request-id") || globalThis.crypto.randomUUID();
 
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-request-id", requestId);

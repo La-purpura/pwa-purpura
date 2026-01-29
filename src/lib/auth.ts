@@ -2,7 +2,6 @@ import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "./prisma";
-import crypto from "crypto";
 
 const SECRET_KEY = process.env.NEXTAUTH_SECRET || "fallback_secret_key_12345";
 const key = new TextEncoder().encode(SECRET_KEY);
@@ -63,7 +62,13 @@ export async function getSession() {
 export async function createSessionCookie(payload: Omit<SessionPayload, "sid">) {
     // Generar registro de sesión en DB
     const expiresAt = new Date(Date.now() + SESSION_DURATION);
-    const tokenHash = crypto.randomBytes(32).toString('hex'); // Hash único para identificación opcional
+
+    // Generate random hex for tokenHash using Web Crypto (Edge compatible)
+    const randomArray = new Uint8Array(32);
+    globalThis.crypto.getRandomValues(randomArray);
+    const tokenHash = Array.from(randomArray)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
 
     const dbSession = await prisma.session.create({
         data: {
