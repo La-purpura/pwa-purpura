@@ -12,7 +12,8 @@ import { CommandPalette } from "@/components/layout/CommandPalette";
 import { GlobalBanner } from "@/components/layout/GlobalBanner";
 import { BroadcastModal } from "@/components/layout/BroadcastModal";
 import { SyncManager } from "@/components/layout/SyncManager";
-import { SyncStatusIndicator } from "@/components/layout/SyncStatusIndicator";
+import { SyncIndicator } from "@/components/shared/SyncIndicator";
+import { ConflictResolver } from "@/components/shared/ConflictResolver";
 
 export default function AppLayoutClient({ children }: { children: React.ReactNode }) {
     const { user, setUser } = useAppStore();
@@ -76,7 +77,12 @@ export default function AppLayoutClient({ children }: { children: React.ReactNod
             <CommandPalette />
             <BroadcastModal />
             <SyncManager />
-            <SyncStatusIndicator />
+            <ConflictResolver />
+            <div className="fixed top-2 right-20 z-50 md:top-4 md:right-28 pointer-events-none">
+                <div className="pointer-events-auto">
+                    <SyncIndicator />
+                </div>
+            </div>
 
             {/* Sidebar solo visible en escritorio */}
             <div className="hidden md:block">
