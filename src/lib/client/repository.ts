@@ -24,7 +24,8 @@ export class BaseRepository<T extends { id: string }> {
 
             if (!syncd) {
                 await db.sync_queue.add({
-                    type: `CREATE_${this.entityName.toUpperCase().slice(0, -1)}`, // 'CREATE_TASK'
+                    entity: this.entityName,
+                    action: 'create',
                     payload: data,
                     idempotencyKey: globalThis.crypto.randomUUID(),
                     status: 'pending',
@@ -33,9 +34,10 @@ export class BaseRepository<T extends { id: string }> {
             }
 
             await db.change_log.add({
-                entityId: data.id,
-                entityType: this.entityName,
-                operation: 'create',
+                entity: this.entityName,
+                entity_id: data.id,
+                field: 'ALL',
+                new_value: data,
                 timestamp: new Date().toISOString()
             });
 
@@ -48,12 +50,13 @@ export class BaseRepository<T extends { id: string }> {
             const exists = await this.table.get(id);
             if (!exists) throw new Error("Entity not found locally");
 
-            const updated = { ...exists, ...changes, updatedAt: new Date() };
+            const updated = { ...exists, ...changes, updatedAt: new Date().toISOString() };
             await this.table.put(updated);
 
             if (!syncd) {
                 await db.sync_queue.add({
-                    type: `UPDATE_${this.entityName.toUpperCase().slice(0, -1)}`,
+                    entity: this.entityName,
+                    action: 'update',
                     payload: { id, ...changes },
                     idempotencyKey: globalThis.crypto.randomUUID(),
                     status: 'pending',
@@ -61,12 +64,20 @@ export class BaseRepository<T extends { id: string }> {
                 });
             }
 
-            await db.change_log.add({
-                entityId: id,
-                entityType: this.entityName,
-                operation: 'update',
-                timestamp: new Date().toISOString()
-            });
+            // Log detailed changes for conflict resolution
+            const timestamp = new Date().toISOString();
+            const logEntries = Object.keys(changes).map(key => ({
+                entity: this.entityName,
+                entity_id: id,
+                field: key,
+                old_value: (exists as any)[key],
+                new_value: (changes as any)[key],
+                timestamp
+            }));
+
+            if (logEntries.length > 0) {
+                await db.change_log.bulkAdd(logEntries);
+            }
 
             return updated;
         });
@@ -78,7 +89,8 @@ export class BaseRepository<T extends { id: string }> {
 
             if (!syncd) {
                 await db.sync_queue.add({
-                    type: `DELETE_${this.entityName.toUpperCase().slice(0, -1)}`,
+                    entity: this.entityName,
+                    action: 'delete',
                     payload: { id },
                     idempotencyKey: globalThis.crypto.randomUUID(),
                     status: 'pending',
@@ -87,9 +99,10 @@ export class BaseRepository<T extends { id: string }> {
             }
 
             await db.change_log.add({
-                entityId: id,
-                entityType: this.entityName,
-                operation: 'delete',
+                entity: this.entityName,
+                entity_id: id,
+                field: 'ALL',
+                new_value: null, // deleted
                 timestamp: new Date().toISOString()
             });
         });

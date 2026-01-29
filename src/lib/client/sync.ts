@@ -158,15 +158,22 @@ export const syncService = {
      * Queues an action manually (prefer using localRepository).
      */
     async queueAction(type: string, payload: any) {
-        const action = {
-            type,
+        // Legacy support helper: try to parse type "CREATE_TASK" -> action="create", entity="tasks"
+        const parts = type.split('_');
+        const action = parts[0].toLowerCase();
+        let entity = parts.slice(1).join('_').toLowerCase();
+        if (!entity.endsWith('s')) entity += 's'; // simple pluralization
+
+        const queueItem = {
+            entity,
+            action,
             payload,
             idempotencyKey: globalThis.crypto.randomUUID(),
             status: 'pending',
             createdAt: new Date().toISOString()
         };
 
-        await db.sync_queue.add(action);
+        await db.sync_queue.add(queueItem);
 
         // Attempt sync immediately if online
         if (navigator.onLine) {
