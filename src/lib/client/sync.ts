@@ -67,9 +67,6 @@ export const syncService = {
 
     /**
      * Pushes pending offline actions to the server.
-     */
-    /**
-     * Pushes pending offline actions to the server.
      * Implements exponential backoff for retries.
      */
     async pushActions() {
@@ -152,8 +149,7 @@ export const syncService = {
                 });
             }
         }
-    }
-},
+    },
 
     /**
      * Uploads pending files.
@@ -234,29 +230,30 @@ export const syncService = {
             }
         }
     },
-        async queueAction(type: string, payload: any) {
-    // Legacy support helper: try to parse type "CREATE_TASK" -> action="create", entity="tasks"
-    const parts = type.split('_');
-    const action = parts[0].toLowerCase();
-    let entity = parts.slice(1).join('_').toLowerCase();
-    if (!entity.endsWith('s')) entity += 's'; // simple pluralization
 
-    const queueItem = {
-        entity,
-        action,
-        payload,
-        idempotencyKey: globalThis.crypto.randomUUID(),
-        status: 'pending',
-        createdAt: new Date().toISOString()
-    };
+    async queueAction(type: string, payload: any) {
+        // Legacy support helper: try to parse type "CREATE_TASK" -> action="create", entity="tasks"
+        const parts = type.split('_');
+        const action = parts[0].toLowerCase();
+        let entity = parts.slice(1).join('_').toLowerCase();
+        if (!entity.endsWith('s')) entity += 's'; // simple pluralization
 
-    await db.sync_queue.add(queueItem);
+        const queueItem = {
+            entity,
+            action,
+            payload,
+            idempotencyKey: globalThis.crypto.randomUUID(),
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        };
 
-    // Attempt sync immediately if online
-    if (navigator.onLine) {
-        this.pushActions().catch(() => { }); // Fire and forget
+        await db.sync_queue.add(queueItem);
+
+        // Attempt sync immediately if online
+        if (navigator.onLine) {
+            this.pushActions().catch(() => { }); // Fire and forget
+        }
+
+        return action;
     }
-
-    return action;
-}
 };
