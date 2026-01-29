@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requirePermission, enforceScope, handleApiError, applySecurityHeaders } from "@/lib/guard";
 import { logAudit } from "@/lib/audit";
-import { TaskSchema } from "@/lib/schemas";
+import { TaskSchema } from "@/lib/validators";
 import { createNotification } from "@/lib/notifications";
 import { validateETag, generateETag } from "@/lib/performance";
 

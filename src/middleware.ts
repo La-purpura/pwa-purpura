@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { rateLimit } from "@/lib/rate-limit";
 
 const SECRET_KEY = process.env.NEXTAUTH_SECRET || "fallback_secret_key_12345";
 const key = new TextEncoder().encode(SECRET_KEY);
@@ -10,6 +11,28 @@ export async function middleware(request: NextRequest) {
 
     // Observability: Correlation ID
     const requestId = request.headers.get("x-request-id") || globalThis.crypto.randomUUID();
+
+    // Rate Limiting
+    const isApi = pathname.startsWith('/api/');
+    const isAuth = pathname.startsWith('/auth') || pathname.startsWith('/api/auth');
+
+    let limit = 200;
+    if (isApi) limit = 60;
+    if (isAuth) limit = 20;
+
+    const { isRateLimited, info } = rateLimit(request, { limit, windowMs: 60 * 1000 });
+
+    if (isRateLimited) {
+        return new NextResponse(JSON.stringify({ error: 'Too Many Requests', retryAfter: info.reset }), {
+            status: 429,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-RateLimit-Limit': info.limit.toString(),
+                'X-RateLimit-Remaining': info.remaining.toString(),
+                'X-RateLimit-Reset': info.reset
+            }
+        });
+    }
 
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-request-id", requestId);

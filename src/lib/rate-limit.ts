@@ -1,35 +1,43 @@
-/**
- * Simple In-Memory Rate Limiter for Next.js API Routes (Serverless environments will reset this frequently, but it's a start)
- * Forproduction, use Upstash Redis or a similar external store.
- */
 
-const trackers = new Map<string, { count: number; lastReset: number }>();
+import { NextRequest } from 'next/server';
 
-interface RateLimitOptions {
+interface RateLimitConfig {
     limit: number;
     windowMs: number;
 }
 
-export function rateLimit(ip: string, options: RateLimitOptions) {
+// In-Memory store for simplified rate limiting on Edge (Map is per isolate, but acceptable for soft limiting)
+// For strict distributed limiting, Redis (Upstash) is required.
+const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
+
+/**
+ * Basic generic Rate Limit implementation compatible with Edge Runtime.
+ * Identifies users by IP or Token.
+ */
+export function rateLimit(request: NextRequest, config: RateLimitConfig = { limit: 100, windowMs: 60 * 1000 }) {
+    const ip = request.ip || 'anonymous';
+    const token = request.cookies.get('session')?.value;
+    const key = token ? `token:${token}` : `ip:${ip}`;
+
     const now = Date.now();
-    const trackerKey = ip;
+    const record = rateLimitMap.get(key) || { count: 0, lastReset: now };
 
-    const tracker = trackers.get(trackerKey) || { count: 0, lastReset: now };
-
-    // Check if window has expired
-    if (now - tracker.lastReset > options.windowMs) {
-        tracker.count = 0;
-        tracker.lastReset = now;
+    if (now - record.lastReset > config.windowMs) {
+        record.count = 0;
+        record.lastReset = now;
     }
 
-    tracker.count++;
-    trackers.set(trackerKey, tracker);
+    record.count += 1;
+    rateLimitMap.set(key, record);
+
+    const isRateLimited = record.count > config.limit;
 
     return {
-        success: tracker.count <= options.limit,
-        current: tracker.count,
-        limit: options.limit,
-        remaining: Math.max(0, options.limit - tracker.count),
-        reset: tracker.lastReset + options.windowMs
+        isRateLimited,
+        info: {
+            limit: config.limit,
+            remaining: Math.max(0, config.limit - record.count),
+            reset: new Date(record.lastReset + config.windowMs).toISOString()
+        }
     };
 }
