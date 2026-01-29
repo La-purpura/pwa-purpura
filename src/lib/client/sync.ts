@@ -70,38 +70,87 @@ export const syncService = {
      */
     /**
      * Pushes pending offline actions to the server.
+     * Implements exponential backoff for retries.
      */
     async pushActions() {
-        const pending = await db.sync_queue.where('status').equals('pending').toArray();
+        // Find pending actions, sort by creation time to maintain order
+        const pending = await db.sync_queue
+            .where('status').anyOf('pending', 'error') // We retry errors too if eligible
+            .sortBy('createdAt');
+
         if (pending.length === 0) return;
+
+        // Filter out items that are not ready for retry yet (Exponential Backoff)
+        const now = Date.now();
+        const actionable = pending.filter(action => {
+            if (action.status === 'pending') return true;
+
+            // If error/retry, check backoff
+            // Base: 2 seconds, Cap: 1 hour. Delay = 2^retries * 1000
+            const delay = Math.min(3600000, Math.pow(2, action.retry_count || 0) * 2000);
+            const lastErrorTime = action.lastErrorAt ? new Date(action.lastErrorAt).getTime() : 0;
+            return (now - lastErrorTime) > delay;
+        });
+
+        if (actionable.length === 0) return;
+
+        // Mark as syncing
+        await Promise.all(actionable.map(a => db.sync_queue.update(a.id, { status: 'syncing' })));
 
         try {
             const response = await fetch('/api/sync/push', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ actions: pending })
+                body: JSON.stringify({ actions: actionable })
             });
 
-            if (!response.ok) throw new Error('Push failed');
+            if (!response.ok) {
+                // If the entire batch request fails (network, 500), revert to error/pending with retry increment
+                throw new Error(`Batch Push Failed: ${response.status}`);
+            }
 
             const { results } = await response.json();
 
-            // Update local actions based on results
+            // Apply results
             for (const res of results) {
-                const action = pending.find(a => a.idempotencyKey === res.idempotencyKey);
-                if (action) {
-                    if (res.status >= 200 && res.status < 300) {
-                        await db.sync_queue.update(action.id, { status: 'synced', result: res.body });
-                    } else if (res.status === 409) {
-                        await db.sync_queue.update(action.id, { status: 'conflict', error: 'Version mismatch' });
-                    } else {
-                        await db.sync_queue.update(action.id, { status: 'failed', error: res.error });
-                    }
+                const action = actionable.find(a => a.idempotencyKey === res.idempotencyKey);
+                if (!action) continue;
+
+                if (res.status >= 200 && res.status < 300) {
+                    await db.sync_queue.update(action.id, {
+                        status: 'synced',
+                        result: res.body,
+                        syncedAt: new Date().toISOString()
+                    });
+                } else if (res.status === 409) {
+                    await db.sync_queue.update(action.id, {
+                        status: 'conflict',
+                        error: 'Version mismatch or logic conflict',
+                        conflictDetails: res.error
+                    });
+                } else {
+                    // Application error (400, 500 specific to item)
+                    await db.sync_queue.update(action.id, {
+                        status: 'error',
+                        last_error: res.error,
+                        lastErrorAt: new Date().toISOString(),
+                        retry_count: (action.retry_count || 0) + 1
+                    });
                 }
             }
-        } catch (error) {
-            console.error('Push actions failed:', error);
-            throw error;
+
+        } catch (error: any) {
+            console.error('Push actions network/batch failure:', error);
+
+            // Revert all to error state with backoff increment
+            for (const action of actionable) {
+                await db.sync_queue.update(action.id, {
+                    status: 'error',
+                    last_error: error.message || 'Network Error',
+                    lastErrorAt: new Date().toISOString(),
+                    retry_count: (action.retry_count || 0) + 1
+                });
+            }
         }
     },
 

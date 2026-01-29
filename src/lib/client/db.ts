@@ -23,7 +23,7 @@ export class AppDatabase extends Dexie {
 
     constructor() {
         super('PurpuraDB');
-        this.version(2).stores({
+        this.version(3).stores({
             tasks: 'id, status, priority, createdAt, updatedAt',
             projects: 'id, status, leaderId, createdAt, updatedAt',
             alerts: 'id, severity, status, createdAt',
@@ -33,8 +33,9 @@ export class AppDatabase extends Dexie {
             sync_state: 'id',
             offline_actions: '++id, type, status, createdAt',
 
-            // New tables
-            sync_queue: '++id, status, type, createdAt',
+            // New tables v3
+            // sync_queue: id, entity, entity_id, action, payload, status, retry_count, last_error, created_at
+            sync_queue: '++id, status, entity, action, retry_count, createdAt',
             change_log: '++id, entityId, entityType, operation, timestamp',
             meta: 'id'
         });
