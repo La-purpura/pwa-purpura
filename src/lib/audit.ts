@@ -28,8 +28,8 @@ export async function logAudit(
             action,
             entity,
             entityId,
-            actorId,
-            metadata: metadata ? JSON.stringify(metadata) : null
+            userId: actorId,
+            metadata: metadata ?? undefined
         }
     }).catch(err => {
         console.error("Audit Log Error:", err);

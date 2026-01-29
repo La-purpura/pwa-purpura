@@ -77,8 +77,8 @@ export async function POST(request: Request) {
                     action: 'LOGIN_FAILURE',
                     entity: 'User',
                     entityId: user.id,
-                    actorId: user.id,
-                    metadata: JSON.stringify({ email: user.email, ip, reason: 'invalid_password' })
+                    userId: user.id,
+                    metadata: { email: user.email, ip, reason: 'invalid_password' }
                 }
             });
 
@@ -114,8 +114,8 @@ export async function POST(request: Request) {
                         action: 'LOGIN_FAILURE_2FA',
                         entity: 'User',
                         entityId: user.id,
-                        actorId: user.id,
-                        metadata: JSON.stringify({ email: user.email, ip })
+                        userId: user.id,
+                        metadata: { email: user.email, ip }
                     }
                 });
                 return NextResponse.json({ error: "Código 2FA inválido" }, { status: 401 });
@@ -146,8 +146,8 @@ export async function POST(request: Request) {
                 action: 'LOGIN_SUCCESS',
                 entity: 'User',
                 entityId: user.id,
-                actorId: user.id,
-                metadata: JSON.stringify({ email: user.email, role: user.role, ip, twoFactorEnabled: is2faEnabled })
+                userId: user.id,
+                metadata: { email: user.email, role: user.role, ip, twoFactorEnabled: is2faEnabled }
             }
         });
 

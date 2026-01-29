@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import Link from "next/link";
+import Image from "next/image";
+import { ArrowLeft, AlertCircle, LogIn } from "lucide-react";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -56,8 +58,17 @@ export default function LoginPage() {
         <main className="min-h-screen bg-[#f8f9fa] dark:bg-[#0a0a0a] flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-md bg-white dark:bg-[#111] rounded-[3rem] p-10 shadow-2xl border border-gray-100 dark:border-gray-800">
                 <div className="text-center mb-10">
-                    <div className="inline-flex size-16 bg-[#851c74]/10 rounded-2xl items-center justify-center text-[#851c74] mb-4">
-                        <span className="material-symbols-outlined text-3xl">login</span>
+                    <div className="flex justify-center mb-6">
+                        <div className="relative size-20 bg-white rounded-3xl shadow-sm p-3 border border-gray-50 dark:bg-black/40 dark:border-gray-800">
+                            <Image
+                                src="/icons/icon-192x192.png"
+                                alt="La Púrpura Logo"
+                                width={80}
+                                height={80}
+                                className="object-contain w-full h-full"
+                                priority
+                            />
+                        </div>
                     </div>
                     <h1 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Acceso Agentes</h1>
                     <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-2">Introduce tus credenciales</p>
@@ -90,7 +101,7 @@ export default function LoginPage() {
 
                     {error && (
                         <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
-                            <span className="material-symbols-outlined text-red-500 text-sm">error</span>
+                            <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
                             <p className="text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-tighter">{error}</p>
                         </div>
                     )}
@@ -104,7 +115,7 @@ export default function LoginPage() {
                             <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                         ) : (
                             <>
-                                <span className="material-symbols-outlined text-sm text-white/50">key</span>
+                                <LogIn className="w-4 h-4 text-white/70" />
                                 Entrar al Sistema
                             </>
                         )}
@@ -120,7 +131,7 @@ export default function LoginPage() {
 
             <div className="mt-8">
                 <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-colors">
-                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                    <ArrowLeft className="w-4 h-4" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Volver</span>
                 </Link>
             </div>
