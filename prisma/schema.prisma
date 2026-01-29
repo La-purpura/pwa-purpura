@@ -68,6 +68,28 @@ model User {
   twoFactorEnabled  Boolean      @default(false)
   scopes            UserScope[]
   notifications     Notification[]
+  attachments       Attachment[] @relation("UploadedAttachments")
+}
+
+model Attachment {
+  id           String    @id @default(cuid())
+  fileName     String
+  fileKey      String
+  fileSize     Int
+  mimeType     String
+  ownerType    String    // e.g., 'Project', 'Task', 'Report'
+  ownerId      String
+  territoryId  String?
+  uploadedById String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  uploadedBy   User      @relation("UploadedAttachments", fields: [uploadedById], references: [id])
+
+  @@index([ownerType, ownerId])
+  @@index([territoryId])
+  @@index([createdAt])
 }
 
 model UserScope {

@@ -1,6 +1,7 @@
 
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import crypto from "crypto";
 
 const R2_BUCKET = process.env.R2_BUCKET || "pwa-purpura-files";
 const R2_ENDPOINT = process.env.R2_ENDPOINT;
@@ -64,6 +65,30 @@ export async function getSignedDownloadUrl(key: string): Promise<string> {
     });
 
     return await getSignedUrl(client, command, { expiresIn: 3600 });
+}
+
+/**
+ * Generates a presigned URL for direct upload from the client.
+ * Valid for 15 minutes.
+ */
+export async function getPresignedUploadUrl(
+    fileName: string,
+    mimeType: string
+): Promise<{ key: string, uploadUrl: string }> {
+    const client = getClient();
+    // Generamos un Key único basado en UUID para evitar colisiones y que sean impredecibles
+    const fileExtension = fileName.split('.').pop();
+    const key = `attachments/${crypto.randomUUID()}.${fileExtension}`;
+
+    const command = new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: key,
+        ContentType: mimeType,
+    });
+
+    const uploadUrl = await getSignedUrl(client, command, { expiresIn: 900 });
+
+    return { key, uploadUrl };
 }
 
 /**
