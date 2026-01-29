@@ -17,6 +17,7 @@ export async function POST(request: Request) {
         const {
             fileName,
             fileKey,
+            thumbnailKey,
             fileSize,
             mimeType,
             ownerType,
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
             data: {
                 fileName,
                 fileKey,
+                thumbnailKey: thumbnailKey || null,
                 fileSize: fileSize || 0,
                 mimeType,
                 ownerType,

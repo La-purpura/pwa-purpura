@@ -38,7 +38,8 @@ export async function GET(request: Request) {
         // Generamos URLs firmadas para previsualización o descarga inmediata
         const mapped = await Promise.all(attachments.map(async (a: any) => ({
             ...a,
-            downloadUrl: await getSignedDownloadUrl(a.fileKey).catch(() => null)
+            downloadUrl: await getSignedDownloadUrl(a.fileKey).catch(() => null),
+            thumbnailUrl: a.thumbnailKey ? await getSignedDownloadUrl(a.thumbnailKey).catch(() => null) : null
         })));
 
         return NextResponse.json(mapped);

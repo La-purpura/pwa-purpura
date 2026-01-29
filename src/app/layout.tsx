@@ -16,6 +16,8 @@ export const metadata: Metadata = {
     },
 };
 
+import { NetworkStatus } from "@/components/shared/NetworkStatus";
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -28,19 +30,9 @@ export default function RootLayout({
             </head>
             <body className={manrope.className}>
                 <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+                    <NetworkStatus />
                     {children}
                 </ThemeProvider>
-                <script
-                    dangerouslySetInnerHTML={{
-                        __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js').catch((err) => console.log('SW error:', err));
-                });
-              }
-            `,
-                    }}
-                />
             </body>
         </html>
     );

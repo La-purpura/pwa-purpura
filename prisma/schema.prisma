@@ -75,6 +75,7 @@ model Attachment {
   id           String    @id @default(cuid())
   fileName     String
   fileKey      String
+  thumbnailKey String?
   fileSize     Int
   mimeType     String
   ownerType    String    // e.g., 'Project', 'Task', 'Report'
