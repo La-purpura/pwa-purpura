@@ -16,17 +16,27 @@ export class AppDatabase extends Dexie {
     sync_state!: Table<SyncState>;
     offline_actions!: Table<any>;
 
+    // Offline-First Infrastructure
+    sync_queue!: Table<any>;
+    change_log!: Table<any>;
+    meta!: Table<any>;
+
     constructor() {
         super('PurpuraDB');
-        this.version(1).stores({
-            tasks: 'id, status, priority, createdAt',
-            projects: 'id, status, leaderId, createdAt',
+        this.version(2).stores({
+            tasks: 'id, status, priority, createdAt, updatedAt',
+            projects: 'id, status, leaderId, createdAt, updatedAt',
             alerts: 'id, severity, status, createdAt',
-            reports: 'id, category, status, createdAt',
+            reports: 'id, category, status, createdAt, updatedAt',
             posts: 'id, authorId, publishedAt',
             users_light: 'id, email',
             sync_state: 'id',
-            offline_actions: '++id, type, status, createdAt'
+            offline_actions: '++id, type, status, createdAt',
+
+            // New tables
+            sync_queue: '++id, status, type, createdAt',
+            change_log: '++id, entityId, entityType, operation, timestamp',
+            meta: 'id'
         });
     }
 }

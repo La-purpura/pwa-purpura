@@ -68,8 +68,11 @@ export const syncService = {
     /**
      * Pushes pending offline actions to the server.
      */
+    /**
+     * Pushes pending offline actions to the server.
+     */
     async pushActions() {
-        const pending = await db.offline_actions.where('status').equals('pending').toArray();
+        const pending = await db.sync_queue.where('status').equals('pending').toArray();
         if (pending.length === 0) return;
 
         try {
@@ -88,11 +91,11 @@ export const syncService = {
                 const action = pending.find(a => a.idempotencyKey === res.idempotencyKey);
                 if (action) {
                     if (res.status >= 200 && res.status < 300) {
-                        await db.offline_actions.update(action.id, { status: 'synced', result: res.body });
+                        await db.sync_queue.update(action.id, { status: 'synced', result: res.body });
                     } else if (res.status === 409) {
-                        await db.offline_actions.update(action.id, { status: 'conflict', error: 'Version mismatch' });
+                        await db.sync_queue.update(action.id, { status: 'conflict', error: 'Version mismatch' });
                     } else {
-                        await db.offline_actions.update(action.id, { status: 'failed', error: res.error });
+                        await db.sync_queue.update(action.id, { status: 'failed', error: res.error });
                     }
                 }
             }
@@ -103,18 +106,18 @@ export const syncService = {
     },
 
     /**
-     * Queues an action to be performed offline/synced later.
+     * Queues an action manually (prefer using localRepository).
      */
     async queueAction(type: string, payload: any) {
         const action = {
             type,
             payload,
-            idempotencyKey: crypto.randomUUID(),
+            idempotencyKey: globalThis.crypto.randomUUID(),
             status: 'pending',
             createdAt: new Date().toISOString()
         };
 
-        await db.offline_actions.add(action);
+        await db.sync_queue.add(action);
 
         // Attempt sync immediately if online
         if (navigator.onLine) {

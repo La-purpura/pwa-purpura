@@ -6,6 +6,7 @@ import { useAppStore } from "@/lib/store";
 import { useRBAC } from "@/hooks/useRBAC";
 import { HierarchicalTerritorySelector } from "@/components/common/HierarchicalTerritorySelector";
 import { apiFetch } from "@/lib/api";
+import { localRepository } from "@/lib/client/repository";
 
 export default function NewTaskPage() {
   const router = useRouter();
@@ -48,22 +49,25 @@ export default function NewTaskPage() {
     setLoading(true);
 
     try {
-      const res = await apiFetch("/api/tasks", {
-        method: "POST",
-        body: formData,
-        title: `Crear tarea: ${formData.title}`
-      });
+      // Offline-first: Create local entity
+      const newTask = {
+        id: globalThis.crypto.randomUUID(), // Local temporary ID
+        ...formData,
+        createdAt: new Date().toISOString(),
+        status: 'pending', // or default status
+        // Note: Backend handles 'assignedTo' logic based on territoryIds if not explicit assignee
+      };
 
-      if (res.ok || res.status === 202) {
-        // En caso de 202 (queued), también redirigimos
-        router.push("/tasks");
-        router.refresh();
-      } else {
-        const err = await res.json();
-        alert(err.error || "Error al crear la tarea");
-      }
+      // Guardar en DB local y encolar sync
+      await localRepository.tasks.create(newTask as any);
+
+      // Éxito inmediato para el usuario
+      router.push("/tasks");
+      router.refresh();
+
     } catch (e) {
-      alert("Error de conexión");
+      console.error(e);
+      alert("Error al guardar tarea localmente");
     } finally {
       setLoading(false);
     }

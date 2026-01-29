@@ -5,21 +5,25 @@ import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { AnnouncementFeed } from "@/components/dashboard/AnnouncementFeed";
 import { CriticalReports } from "@/components/dashboard/CriticalReports";
+import { useEntityCache } from "@/hooks/useEntityCache";
 
 export default function UserDashboardDesktop() {
     const { user } = useAppStore();
     const [summary, setSummary] = useState<any>(null);
-    const [recentTasks, setRecentTasks] = useState<any[]>([]);
+
+    // Offline-first: Read from local DB
+    const { data: allTasks, loading } = useEntityCache('tasks');
+
+    // Process local data for display
+    const recentTasks = allTasks
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 4);
 
     useEffect(() => {
+        // Summary might still need an specialized endpoint or be calculated locally
         fetch('/api/dashboard/summary')
             .then(res => res.json())
             .then(setSummary)
-            .catch(console.error);
-
-        fetch('/api/tasks?limit=4')
-            .then(res => res.json())
-            .then(setRecentTasks)
             .catch(console.error);
     }, []);
 
