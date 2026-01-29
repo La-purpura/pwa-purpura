@@ -21,9 +21,13 @@ export class AppDatabase extends Dexie {
     change_log!: Table<any>;
     meta!: Table<any>;
 
+    // Uploads & Attachments
+    attachments!: Table<any>;
+    uploads_queue!: Table<any>;
+
     constructor() {
         super('PurpuraDB');
-        this.version(4).stores({
+        this.version(5).stores({
             tasks: 'id, status, priority, createdAt, updatedAt',
             projects: 'id, status, leaderId, createdAt, updatedAt',
             alerts: 'id, severity, status, createdAt',
@@ -36,7 +40,12 @@ export class AppDatabase extends Dexie {
             // Infrastructure v4
             sync_queue: '++id, status, entity, action, retry_count, createdAt',
             change_log: '++id, entity, entity_id, timestamp', // detailed changeset in payload
-            meta: 'id'
+            meta: 'id',
+
+            // New tables v5 (Start fresh or append? Dexie handles appendix well if we keep history)
+            // PR-29: Attachments & Uploads
+            attachments: 'id, owner_id, status, type, createdAt', // metadata + local blob if needed
+            uploads_queue: '++id, status, retry_count, createdAt' // specialized queue for binaries?
         });
     }
 }

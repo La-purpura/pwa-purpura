@@ -152,34 +152,111 @@ export const syncService = {
                 });
             }
         }
-    },
+    }
+},
 
     /**
-     * Queues an action manually (prefer using localRepository).
+     * Uploads pending files.
      */
-    async queueAction(type: string, payload: any) {
-        // Legacy support helper: try to parse type "CREATE_TASK" -> action="create", entity="tasks"
-        const parts = type.split('_');
-        const action = parts[0].toLowerCase();
-        let entity = parts.slice(1).join('_').toLowerCase();
-        if (!entity.endsWith('s')) entity += 's'; // simple pluralization
+    async pushUploads() {
+        const pending = await db.uploads_queue
+            .where('status').anyOf('pending', 'error')
+            .sortBy('createdAt');
 
-        const queueItem = {
-            entity,
-            action,
-            payload,
-            idempotencyKey: globalThis.crypto.randomUUID(),
-            status: 'pending',
-            createdAt: new Date().toISOString()
-        };
+        if (pending.length === 0) return;
 
-        await db.sync_queue.add(queueItem);
+        for (const task of pending) {
+            // Check backoff
+            if (task.status === 'error') {
+                const delay = Math.min(3600000, Math.pow(2, task.retry_count || 0) * 2000);
+                const lastErrorTime = task.lastErrorAt ? new Date(task.lastErrorAt).getTime() : 0;
+                if (Date.now() - lastErrorTime < delay) continue;
+            }
 
-        // Attempt sync immediately if online
-        if (navigator.onLine) {
-            this.pushActions().catch(() => { }); // Fire and forget
+            const attachment = await db.attachments.get(task.attachmentId);
+            if (!attachment || !attachment.file) {
+                // If attachment is missing or has no file blob, we can't upload. Mark as failed permanently?
+                // Or maybe it was already synced and cleaned up? Check status.
+                if (attachment?.status === 'synced') {
+                    await db.uploads_queue.delete(task.id);
+                } else {
+                    console.error('Attachment file missing for upload', task);
+                    // Mark queue item as failed to avoid infinite loop
+                    await db.uploads_queue.update(task.id, { status: 'failed_fatal', error: 'File blob missing' });
+                }
+                continue;
+            }
+
+            try {
+                // 1. Get Presigned URL
+                const preRes = await fetch('/api/uploads/presigned', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: attachment.name,
+                        contentType: attachment.mimeType
+                    })
+                });
+
+                if (!preRes.ok) throw new Error('Failed to get presigned URL');
+                const { uploadUrl, key } = await preRes.json();
+
+                // 2. Upload Binary
+                const uploadRes = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: attachment.file,
+                    headers: { 'Content-Type': attachment.mimeType }
+                });
+
+                if (!uploadRes.ok) throw new Error('Failed to upload file to storage');
+
+                // 3. Update Attachment Record (Local & Sync State)
+                const publicUrl = uploadUrl.split('?')[0]; // simple approximation or return from server
+
+                await db.attachments.update(attachment.id, {
+                    status: 'synced',
+                    url: publicUrl,
+                    key: key,
+                    file: null // Free up IndexedDB space!
+                });
+
+                // 4. Remove from queue
+                await db.uploads_queue.delete(task.id);
+
+            } catch (error: any) {
+                console.error('Upload failed:', error);
+                await db.uploads_queue.update(task.id, {
+                    status: 'error',
+                    last_error: error.message,
+                    lastErrorAt: new Date().toISOString(),
+                    retry_count: (task.retry_count || 0) + 1
+                });
+            }
         }
+    },
+        async queueAction(type: string, payload: any) {
+    // Legacy support helper: try to parse type "CREATE_TASK" -> action="create", entity="tasks"
+    const parts = type.split('_');
+    const action = parts[0].toLowerCase();
+    let entity = parts.slice(1).join('_').toLowerCase();
+    if (!entity.endsWith('s')) entity += 's'; // simple pluralization
 
-        return action;
+    const queueItem = {
+        entity,
+        action,
+        payload,
+        idempotencyKey: globalThis.crypto.randomUUID(),
+        status: 'pending',
+        createdAt: new Date().toISOString()
+    };
+
+    await db.sync_queue.add(queueItem);
+
+    // Attempt sync immediately if online
+    if (navigator.onLine) {
+        this.pushActions().catch(() => { }); // Fire and forget
     }
+
+    return action;
+}
 };
