@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
         const limiter = rateLimit(ip, { limit: 10, windowMs: 60 * 1000 }); // Increased slightly for 2FA steps
 
-        if (!limiter.success) {
+        if (limiter.isRateLimited) {
             return applySecurityHeaders(
                 NextResponse.json({ error: "Demasiados intentos. Reintente en un minuto." }, { status: 429 }),
                 { noStore: true }

@@ -6,17 +6,21 @@ interface RateLimitConfig {
     windowMs: number;
 }
 
-// In-Memory store for simplified rate limiting on Edge (Map is per isolate, but acceptable for soft limiting)
-// For strict distributed limiting, Redis (Upstash) is required.
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 
-/**
- * Basic generic Rate Limit implementation compatible with Edge Runtime.
- * Identifies users by IP or Token.
- */
-export function rateLimit(request: NextRequest, config: RateLimitConfig = { limit: 100, windowMs: 60 * 1000 }) {
-    const ip = request.ip || 'anonymous';
-    const token = request.cookies.get('session')?.value;
+export function rateLimit(requestOrIp: NextRequest | string, config: RateLimitConfig = { limit: 100, windowMs: 60 * 1000 }) {
+    let ip = 'anonymous';
+    let token: string | undefined;
+
+    if (typeof requestOrIp === 'string') {
+        ip = requestOrIp;
+    } else {
+        // Safe access if it's NextRequest
+        const req = requestOrIp as NextRequest;
+        ip = req.ip || req.headers.get('x-forwarded-for')?.split(',')[0] || 'anonymous';
+        token = req.cookies.get('session')?.value;
+    }
+
     const key = token ? `token:${token}` : `ip:${ip}`;
 
     const now = Date.now();
